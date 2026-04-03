@@ -1,30 +1,82 @@
-import {
-  createUIMessageStreamResponse,
-  createUIMessageStream,
-} from "ai";
+import { streamText, tool, stepCountIs } from "ai";
+import { openai } from "@ai-sdk/openai";
+import { z } from "zod";
 
-function getMockResponse(): string {
-  const responses = [
-    "Merhaba! Size nasıl yardımcı olabilirim? AkOs proje yönetim sistemi hakkında sorularınızı yanıtlayabilirim. Projeleriniz, müşterileriniz, teklifler veya hakediş süreçleri hakkında bilgi almak isterseniz sormaktan çekinmeyin.",
-    "Bu harika bir soru! İnşaat projelerinde maliyet kontrolü için birkaç önerim var:\n\n1. **BOQ takibi** — Her iş kalemini düzenli kontrol edin\n2. **Hakediş planlaması** — Aylık hakediş dönemlerini takip edin\n3. **Taşeron yönetimi** — Sözleşme koşullarını net belirleyin\n4. **Satınalma optimizasyonu** — Toplu alım avantajlarını değerlendirin\n\nDaha detaylı bilgi ister misiniz?",
-    "Tabii ki! İşte proje zaman çizelgesi oluşturma adımları:\n\n- Projenin kapsamını ve iş kırılım yapısını belirleyin\n- Her bir aktivite için süre tahminlerini yapın\n- Kritik yol analizini gerçekleştirin\n- Kaynak planlamasını yapın\n- Gantt şemasını oluşturun\n\nBu konuda AkOs sistemi size otomatik raporlama ve takip imkanı sunuyor.",
-    "Hakediş süreci hakkında bilgi vermeme sevindim. Genel adımlar şunlardır:\n\n1. Saha ölçümleri yapılır\n2. İş kalemleri ve miktarlar doğrulanır\n3. Birim fiyatlar uygulanır\n4. Kesintiler ve avanslar hesaplanır\n5. Hakediş raporu oluşturulur\n6. Onay sürecine sunulur\n\nSistem üzerinden tüm bu adımları kolayca takip edebilirsiniz.",
-  ];
-  return responses[Math.floor(Math.random() * responses.length)];
-}
+const SYSTEM_PROMPT = `Sen AkOs yapay zeka asistanısın. AkOs, inşaat ve proje yönetimi için AI-first bir platformdur.
 
-export async function POST() {
-  const text = getMockResponse();
-  const words = text.split(" ");
+Görevlerin:
+- Kullanıcıların projelerini yönetmelerine yardımcı ol
+- Proje oluşturma, dashboard görüntüleme gibi işlemleri tool'lar aracılığıyla yap
+- Türkçe yanıt ver (kullanıcı İngilizce yazarsa İngilizce yanıt ver)
+- Kısa ve net cevaplar ver
+- İnşaat sektörüne özel terimleri doğru kullan
 
-  const stream = createUIMessageStream({
-    execute: async ({ writer }) => {
-      for (const word of words) {
-        writer.write({ type: "text-delta", delta: word + " ", id: "msg-1" });
-        await new Promise((r) => setTimeout(r, 30 + Math.random() * 50));
-      }
+Mevcut yeteneklerin:
+- createProject: Yeni proje oluşturma
+- getDashboard: Dashboard özet verilerini getirme
+
+Kullanıcı bir proje oluşturmak istediğinde createProject tool'unu kullan.
+Kullanıcı dashboard veya genel özet istediğinde getDashboard tool'unu kullan.`;
+
+export async function POST(req: Request) {
+  const { messages } = await req.json();
+
+  const result = streamText({
+    model: openai("gpt-4o-mini"),
+    system: SYSTEM_PROMPT,
+    messages,
+    tools: {
+      createProject: tool({
+        description:
+          "Yeni bir proje oluşturur. Proje adı ve müşteri zorunludur, bütçe ve açıklama opsiyoneldir.",
+        inputSchema: z.object({
+          name: z.string().min(1).describe("Proje adı"),
+          customer: z.string().min(1).describe("Müşteri adı"),
+          budget: z.number().positive().optional().describe("Bütçe (TL)"),
+          description: z
+            .string()
+            .optional()
+            .describe("Proje açıklaması"),
+        }),
+        execute: async (params) => {
+          // TODO: Supabase entegrasyonu — proje veritabanına kaydedilecek
+          const project = {
+            id: crypto.randomUUID(),
+            name: params.name,
+            customer: params.customer,
+            budget: params.budget ?? null,
+            description: params.description ?? null,
+            createdAt: new Date().toISOString(),
+          };
+          return { success: true, project };
+        },
+      }),
+      getDashboard: tool({
+        description:
+          "Dashboard özet verilerini getirir: aktif projeler, müşteri sayısı, bekleyen teklifler ve son aktiviteler.",
+        inputSchema: z.object({
+          period: z
+            .enum(["week", "month", "quarter", "year"])
+            .default("month")
+            .describe("Özet dönemi"),
+        }),
+        execute: async (params) => {
+          // TODO: Supabase entegrasyonu — gerçek veriler çekilecek
+          return {
+            success: true,
+            summary: {
+              activeProjects: 0,
+              totalCustomers: 0,
+              pendingProposals: 0,
+              recentActivities: [],
+              period: params.period,
+            },
+          };
+        },
+      }),
     },
+    stopWhen: stepCountIs(3),
   });
 
-  return createUIMessageStreamResponse({ stream });
+  return result.toUIMessageStreamResponse();
 }
