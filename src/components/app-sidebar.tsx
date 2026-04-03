@@ -14,6 +14,7 @@ import {
   MapPin,
   Settings,
   LogOut,
+  MessageSquare,
 } from "lucide-react";
 import {
   Sidebar,
@@ -31,6 +32,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
 const navItems = [
+  { title: "AI Sohbet", href: "/chat", icon: MessageSquare },
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Projeler", href: "/projeler", icon: FolderKanban },
   { title: "Müşteriler", href: "/musteriler", icon: Users },
