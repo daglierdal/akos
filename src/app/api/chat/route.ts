@@ -25,9 +25,11 @@ Görevlerin:
 
 Mevcut yeteneklerin:
 - createProject: Yeni proje oluşturma
+- createDriveFolder: Google Drive'da proje klasor yapisi olusturma
 - getDashboard: Dashboard özet verilerini getirme
 
 Kullanıcı bir proje oluşturmak istediğinde createProject tool'unu kullan.
+Kullanıcı Google Drive klasoru veya proje klasor yapisi istediginde createDriveFolder tool'unu kullan.
 Kullanıcı dashboard veya genel özet istediğinde getDashboard tool'unu kullan.`;
 
 export async function POST(req: Request) {

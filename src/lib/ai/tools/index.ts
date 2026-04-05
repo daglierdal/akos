@@ -3,6 +3,7 @@ import type { ToolSet } from "ai";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { createProject } from "./createProject";
+import { createDriveFolder } from "./createDriveFolder";
 import { getDashboard } from "./getDashboard";
 
 export interface ToolContext {
@@ -31,7 +32,7 @@ export function defineTool<TParams extends z.ZodType, TResult>(
   return toolDefinition;
 }
 
-const registry = [createProject, getDashboard] as const;
+const registry = [createProject, createDriveFolder, getDashboard] as const;
 
 export function getTools(context: ToolsContext): ToolSet {
   return Object.fromEntries(
@@ -47,4 +48,4 @@ export function getTools(context: ToolsContext): ToolSet {
   ) as ToolSet;
 }
 
-export { createProject, getDashboard };
+export { createProject, createDriveFolder, getDashboard };

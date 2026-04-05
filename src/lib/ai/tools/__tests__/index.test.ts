@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   defineTool,
   createProject,
+  createDriveFolder,
   getDashboard,
   getTools,
 } from "../index";
@@ -32,6 +33,11 @@ describe("tool registry exports", () => {
     expect(getDashboard.name).toBe("getDashboard");
   });
 
+  it("should export createDriveFolder", () => {
+    expect(createDriveFolder).toBeDefined();
+    expect(createDriveFolder.name).toBe("createDriveFolder");
+  });
+
   it("should build AI SDK tools from the shared registry", () => {
     const tools = getTools({
       supabase: {} as never,
@@ -40,6 +46,7 @@ describe("tool registry exports", () => {
     });
 
     expect(tools.createProject).toBeDefined();
+    expect(tools.createDriveFolder).toBeDefined();
     expect(tools.getDashboard).toBeDefined();
   });
 });
