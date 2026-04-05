@@ -4,6 +4,7 @@ import type { ChatMessageRow, ChatSessionRow } from "@/lib/chat/chat-store";
 export interface ChatSessionListItem {
   createdAt: string;
   id: string;
+  persistErrorAt: string | null;
   title: string;
   updatedAt: string;
 }
@@ -39,6 +40,7 @@ export function getMessageText(
 export function toChatSessionListItem(session: ChatSessionRow): ChatSessionListItem {
   return {
     id: session.id,
+    persistErrorAt: session.persist_error_at,
     title: session.title?.trim() || "Yeni Sohbet",
     createdAt: session.created_at,
     updatedAt: session.updated_at,

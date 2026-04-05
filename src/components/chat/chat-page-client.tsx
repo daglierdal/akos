@@ -10,7 +10,11 @@ import { ChatInput } from "@/components/chat/chat-input";
 import { ResultPanel } from "@/components/chat/result-panel";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
-import { getChatMessages, getChatSessions } from "@/lib/chat/chat-store";
+import {
+  getChatMessages,
+  getChatSessions,
+  getLastMessageGap,
+} from "@/lib/chat/chat-store";
 import {
   buildChatTitle,
   createChatSessionId,
@@ -31,7 +35,10 @@ export function ChatPageClient({
   initialSessions,
 }: ChatPageClientProps) {
   const supabaseRef = useRef(createClient());
-  const [persistenceWarning, setPersistenceWarning] = useState(false);
+  const [requestPersistenceWarning, setRequestPersistenceWarning] =
+    useState(false);
+  const [sessionPersistenceWarning, setSessionPersistenceWarning] =
+    useState(false);
   const [sessions, setSessions] = useState(initialSessions);
   const [activeSessionId, setActiveSessionId] = useState(
     initialSessionId ?? createChatSessionId(),
@@ -49,7 +56,7 @@ export function ChatPageClient({
       api: "/api/chat",
       fetch: async (input, init) => {
         const response = await fetch(input, init);
-        setPersistenceWarning(
+        setRequestPersistenceWarning(
           response.headers.get("X-Chat-Persistence") === "failed",
         );
         return response;
@@ -81,6 +88,53 @@ export function ChatPageClient({
     }));
   }, [activeSessionId, messages]);
 
+  useEffect(() => {
+    if (isLoadingSession || status === "submitted" || status === "streaming") {
+      return;
+    }
+
+    let isCancelled = false;
+
+    async function syncPersistenceWarning() {
+      const activeSession = sessions.find((session) => session.id === activeSessionId);
+      const persistErrorAt = activeSession?.persistErrorAt;
+      const isRecentPersistError =
+        typeof persistErrorAt === "string" &&
+        Date.now() - new Date(persistErrorAt).getTime() <= 5 * 60 * 1000;
+
+      if (!isRecentPersistError || messages.length === 0) {
+        if (!isCancelled) {
+          setSessionPersistenceWarning(false);
+        }
+        return;
+      }
+
+      try {
+        const gap = await getLastMessageGap(
+          supabaseRef.current,
+          activeSessionId,
+          messages.length,
+        );
+
+        if (!isCancelled) {
+          setSessionPersistenceWarning(gap > 0);
+        }
+      } catch (error) {
+        console.error("Chat persistence state could not be checked.", error);
+
+        if (!isCancelled) {
+          setSessionPersistenceWarning(isRecentPersistError);
+        }
+      }
+    }
+
+    void syncPersistenceWarning();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [activeSessionId, isLoadingSession, messages.length, sessions, status]);
+
   async function refreshSessions() {
     try {
       const nextSessions = await getChatSessions(supabaseRef.current);
@@ -93,7 +147,7 @@ export function ChatPageClient({
   async function handleSelectSession(id: string) {
     setActiveSessionId(id);
     setInputValue("");
-    setPersistenceWarning(false);
+    setRequestPersistenceWarning(false);
 
     const cachedMessages = messageCache[id];
     if (cachedMessages) {
@@ -123,7 +177,8 @@ export function ChatPageClient({
     const nextId = createChatSessionId();
     setActiveSessionId(nextId);
     setInputValue("");
-    setPersistenceWarning(false);
+    setRequestPersistenceWarning(false);
+    setSessionPersistenceWarning(false);
     setMessages([]);
   }
 
@@ -144,6 +199,7 @@ export function ChatPageClient({
         {
           id: activeSessionId,
           title,
+          persistErrorAt: null,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         },
@@ -163,7 +219,8 @@ export function ChatPageClient({
     }
 
     setInputValue("");
-    setPersistenceWarning(false);
+    setRequestPersistenceWarning(false);
+    setSessionPersistenceWarning(false);
 
     await sendMessage(
       { text },
@@ -199,8 +256,10 @@ export function ChatPageClient({
             <h1 className="truncate text-sm font-medium text-muted-foreground">
               {activeTitle}
             </h1>
-            {persistenceWarning ? (
-              <p className="text-xs text-amber-600">Mesaj kaydedilemedi.</p>
+            {requestPersistenceWarning || sessionPersistenceWarning ? (
+              <p className="text-xs text-amber-600">
+                Son mesaj kaydedilemedi.
+              </p>
             ) : null}
           </div>
           <Button

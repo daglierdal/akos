@@ -54,6 +54,7 @@ export interface Database {
         Row: {
           created_at: string;
           id: string;
+          persist_error_at: string | null;
           project_id: string | null;
           tenant_id: string;
           title: string | null;
@@ -63,6 +64,7 @@ export interface Database {
         Insert: {
           created_at?: string;
           id?: string;
+          persist_error_at?: string | null;
           project_id?: string | null;
           tenant_id: string;
           title?: string | null;
@@ -72,6 +74,7 @@ export interface Database {
         Update: {
           created_at?: string;
           id?: string;
+          persist_error_at?: string | null;
           project_id?: string | null;
           tenant_id?: string;
           title?: string | null;

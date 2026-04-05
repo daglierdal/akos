@@ -20,6 +20,11 @@ interface SaveChatMessageInput {
   content: string;
 }
 
+interface SetChatSessionPersistErrorInput {
+  sessionId: string;
+  persistErrorAt: string | null;
+}
+
 async function resolveCurrentUserId(supabase: DbClient) {
   const {
     data: { user },
@@ -115,6 +120,20 @@ export async function saveChatMessage(
   return data;
 }
 
+export async function setChatSessionPersistError(
+  supabase: DbClient,
+  { sessionId, persistErrorAt }: SetChatSessionPersistErrorInput,
+) {
+  const { error } = await supabase
+    .from("chat_sessions")
+    .update({ persist_error_at: persistErrorAt })
+    .eq("id", sessionId);
+
+  if (error) {
+    throw error;
+  }
+}
+
 export async function getChatSessions(supabase: DbClient) {
   const userId = await resolveCurrentUserId(supabase);
 
@@ -124,7 +143,9 @@ export async function getChatSessions(supabase: DbClient) {
 
   const { data, error } = await supabase
     .from("chat_sessions")
-    .select("id, title, created_at, updated_at, user_id, tenant_id, project_id")
+    .select(
+      "id, title, created_at, updated_at, user_id, tenant_id, project_id, persist_error_at",
+    )
     .eq("user_id", userId)
     .order("updated_at", { ascending: false })
     .limit(50);
@@ -134,6 +155,27 @@ export async function getChatSessions(supabase: DbClient) {
   }
 
   return data;
+}
+
+export async function getLastMessageGap(
+  supabase: DbClient,
+  sessionId: string,
+  expectedCount: number,
+) {
+  if (expectedCount <= 0) {
+    return 0;
+  }
+
+  const { count, error } = await supabase
+    .from("chat_messages")
+    .select("*", { count: "exact", head: true })
+    .eq("session_id", sessionId);
+
+  if (error) {
+    throw error;
+  }
+
+  return Math.max(0, expectedCount - (count ?? 0));
 }
 
 export async function getChatMessages(supabase: DbClient, sessionId: string) {

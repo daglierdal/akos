@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   getChatMessages,
+  getLastMessageGap,
   getChatSessions,
   saveChatMessage,
   saveChatSession,
+  setChatSessionPersistError,
 } from "@/lib/chat/chat-store";
 
 describe("chat-store", () => {
@@ -128,6 +130,41 @@ describe("chat-store", () => {
 
     expect(result).toEqual([{ id: "session-1", title: "Baslik" }]);
     expect(sessionsQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
+  });
+
+  it("updates the chat session persist error timestamp", async () => {
+    const updateEq = vi.fn().mockResolvedValue({ error: null });
+    const update = vi.fn(() => ({ eq: updateEq }));
+    const supabase = {
+      from: vi.fn(() => ({ update })),
+    } as any;
+
+    await setChatSessionPersistError(supabase, {
+      sessionId: "session-1",
+      persistErrorAt: "2026-04-05T12:00:00.000Z",
+    });
+
+    expect(update).toHaveBeenCalledWith({
+      persist_error_at: "2026-04-05T12:00:00.000Z",
+    });
+    expect(updateEq).toHaveBeenCalledWith("id", "session-1");
+  });
+
+  it("returns the gap between expected and persisted message counts", async () => {
+    const eq = vi.fn().mockResolvedValue({
+      count: 2,
+      error: null,
+    });
+    const select = vi.fn(() => ({ eq }));
+    const supabase = {
+      from: vi.fn(() => ({ select })),
+    } as any;
+
+    const result = await getLastMessageGap(supabase, "session-1", 3);
+
+    expect(select).toHaveBeenCalledWith("*", { count: "exact", head: true });
+    expect(eq).toHaveBeenCalledWith("session_id", "session-1");
+    expect(result).toBe(1);
   });
 
   it("returns the messages of a session in ascending order", async () => {

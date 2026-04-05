@@ -6,7 +6,11 @@ import {
 } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { getTools } from "@/lib/ai/tools";
-import { saveChatMessage, saveChatSession } from "@/lib/chat/chat-store";
+import {
+  saveChatMessage,
+  saveChatSession,
+  setChatSessionPersistError,
+} from "@/lib/chat/chat-store";
 import { buildChatTitle, getMessageText } from "@/lib/chat/chat-ui";
 import { createClient } from "@/lib/supabase/server";
 
@@ -119,6 +123,10 @@ export async function POST(req: Request) {
           role: "assistant",
           content: getMessageText(responseMessage),
         });
+        await setChatSessionPersistError(supabase, {
+          sessionId,
+          persistErrorAt: null,
+        });
       } catch (error) {
         console.error("[CHAT_PERSIST_FAIL]", {
           sessionId,
@@ -126,6 +134,22 @@ export async function POST(req: Request) {
           phase: "assistant-message",
           error: error instanceof Error ? error.message : String(error),
         });
+
+        try {
+          await setChatSessionPersistError(supabase, {
+            sessionId,
+            persistErrorAt: new Date().toISOString(),
+          });
+        } catch (persistError) {
+          console.error("[CHAT_PERSIST_FAIL_MARK]", {
+            sessionId,
+            tenantId,
+            error:
+              persistError instanceof Error
+                ? persistError.message
+                : String(persistError),
+          });
+        }
       }
     },
   });
