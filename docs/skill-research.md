@@ -1,8 +1,8 @@
 # GT Skill Sistemi Araştırması
 
-> **Tarih:** 2026-04-04
-> **Yazar:** Polecat rust (ak-2cf)
-> **Kapsam:** Gas Town SKILL.md formatı, rol bazlı skill pattern'leri, multi-agent skill yönetimi, CLI karşılaştırması
+> **Tarih:** 2026-04-05
+> **Yazar:** Polecat guzzle (ak-8cw)
+> **Kapsam:** Gas Town SKILL.md formatı, rol bazlı skill pattern'leri, multi-agent skill yönetimi, CLI karşılaştırması, agent routing
 
 ---
 
@@ -13,9 +13,10 @@
 3. [Multi-Agent Ortamda Skill Yönetimi](#3-multi-agent-ortamda-skill-yönetimi)
 4. [Rig-Level vs Town-Level Skill Farkı](#4-rig-level-vs-town-level-skill-farkı)
 5. [Steve Yegge Tavsiyeleri](#5-steve-yegge-tavsiyeleri)
-6. [Claude Code, Gemini CLI, Codex Karşılaştırması](#6-claude-code-gemini-cli-codex-karşılaştırması)
-7. [Sonuç ve Öneriler](#7-sonuç-ve-öneriler)
-8. [Kaynaklar](#8-kaynaklar)
+6. [Agent Routing Skill Örnekleri (Hangi Görev Hangi Agent'a)](#6-agent-routing-skill-örnekleri-hangi-görev-hangi-agenta)
+7. [Claude Code, Gemini CLI, Codex Karşılaştırması](#7-claude-code-gemini-cli-codex-karşılaştırması)
+8. [Sonuç ve Öneriler](#8-sonuç-ve-öneriler)
+9. [Kaynaklar](#9-kaynaklar)
 
 ---
 
@@ -352,15 +353,48 @@ Yegge'nin programlama evrim modeli skill tasarımını etkiler:
 
 ---
 
-## 6. Claude Code, Gemini CLI, Codex Karşılaştırması
+## 6. Agent Routing Skill Örnekleri (Hangi Görev Hangi Agent'a)
 
-### 6.1 Genel Bakış
+Gas Town'da görevlerin agent'lara yönlendirilmesi (routing) büyük ölçüde **formül-tabanlı iş akışları** ve **rol-bazlı skill setleri** ile sağlanır. Bu mekanizmalar, agent'ların özerk bir şekilde doğru görevleri üstlenmesini ve işbirliği yapmasını sağlar.
+
+### 6.1 Formül-Tabanlı Yönlendirme
+
+Gas Town'ın temel routing mekanizması, `mol-polecat-work` veya `mol-idea-to-plan` gibi önceden tanımlanmış formüllerin (molecules) kullanılmasıdır. Her formül, belirli bir görevi tamamlamak için adım-adım bir iş akışı tanımlar. Bir görev bir formüle atandığında, formülün adımları, o formülü işleyebilecek belirli bir role sahip agent'lara yönlendirilir.
+
+**Örnekler:**
+- `mol-polecat-work`: Bir `Polecat` agent'ına atanır ve kod implementasyonu, test ve commit gibi adımları içerir.
+- `mol-idea-to-plan`: Bir `Mayor` agent'ına atanır ve bir fikri detaylı bir plana dönüştürme adımlarını içerir.
+- `mol-witness-patrol`: Bir `Witness` agent'ına atanır ve sistem izleme veya denetim görevlerini kapsar.
+
+### 6.2 Rol-Bazlı Skill Setleri ve Discovery
+
+Her agent rolünün (Polecat, Mayor, Witness, Refinery, Deacon) belirli skill setleri bulunur. Agent'lar, kendi rollerine uygun skill'leri kullanarak görevleri değerlendirir ve üstlenir. Skill keşif mekanizmaları (Town-level, Rig-level, Project-level), agent'ın içinde bulunduğu bağlama göre hangi skill'leri kullanabileceğini belirler.
+
+- **Mayor:** Genellikle üst düzey planlama ve görev atama skill'leri ile donatılmıştır. Bir görevin karmaşıklığını analiz eder ve uygun Polecat'e atar.
+- **Witness:** Performans izleme, hata tespiti ve uyarı yönetimi skill'leri ile görevlendirilir. Polecat'lerin ilerlemesini denetler.
+- **Refinery:** Merge queue yönetimi, çatışma çözümü ve otomatik test tetikleme skill'lerine sahiptir. Polecat'lerden gelen değişikliklerin ana branch'e güvenli bir şekilde entegre edilmesinden sorumludur.
+
+### 6.3 Hiyerarşik Gözetim ve Task Yönlendirme
+
+Gas Town'daki hiyerarşik yapı, görevlerin akışını ve agent'lar arası etkileşimi yönetir:
+
+- **Mayor:** Yeni görevleri oluşturur veya mevcut görevleri triage eder ve bunları uygun formüller aracılığıyla Polecat'lere atar.
+- **Witness:** Polecat'lerin görevlerini izler ve potansiyel sorunları veya blokajları tespit ettiğinde müdahale eder veya diğer agent'ları (örneğin Mayor'u) bilgilendirir.
+- **Refinery:** Polecat'lerin tamamladığı işi (genellikle kod değişikliklerini) entegre eder. Build/test başarısızlıkları durumunda, ilgili Polecat'e geri bildirim sağlar veya yeni bir düzeltme görevi oluşturulmasını tetikler.
+
+Bu katmanlı yapı, görevlerin doğru agent'a, doğru zamanda, doğru tool'lar ve skill'lerle yönlendirilmesini sağlar, böylece Gas Town'ın genel verimliliği ve dayanıklılığı artırılır.
+
+---
+
+## 7. Claude Code, Gemini CLI, Codex Karşılaştırması
+
+### 7.1 Genel Bakış
 
 Üç büyük CLI aracı da skill/extension sistemine sahiptir. Aralık 2025'te Anthropic'in
 Agent Skills'ı açık standart olarak yayımlamasının ardından, OpenAI da aynı standardı
 benimsemiştir.
 
-### 6.2 Karşılaştırma Tablosu
+### 7.2 Karşılaştırma Tablosu
 
 | Özellik | Claude Code | Gemini CLI | Codex CLI |
 |---------|------------|------------|-----------|
@@ -376,7 +410,7 @@ benimsemiştir.
 | **Hiyerarşi** | Enterprise > Personal > Project | Global > User | System > Admin > User > Repo |
 | **Plugin sistemi** | Evet (namespace'li skill'ler) | Evet (extension marketplace) | Yok (doğrudan skill) |
 
-### 6.3 Claude Code Skill Sistemi
+### 7.3 Claude Code Skill Sistemi
 
 Claude Code'un skill sistemi, Aralık 2025'te açık standart olarak yayımlanmış ve Ocak 2026'da
 hot-reloading desteği eklenmiştir.
@@ -398,7 +432,7 @@ hot-reloading desteği eklenmiştir.
 | Project | `.claude/skills/` | Bu proje |
 | Plugin | `<plugin>/skills/` | Plugin aktifken |
 
-### 6.4 Gemini CLI Extension Sistemi
+### 7.4 Gemini CLI Extension Sistemi
 
 Ekim 2025'te piyasaya sürülen Gemini CLI extension'ları, kapsamlı bir özelleştirme
 sistemi sunar.
@@ -437,7 +471,7 @@ my-extension/
 - `gemini extensions install <url>` ile kurulum
 - Google, Figma, Stripe, Shopify gibi ortaklardan hazır extension'lar
 
-### 6.5 OpenAI Codex CLI Skill Sistemi
+### 7.5 OpenAI Codex CLI Skill Sistemi
 
 Codex, Claude Code ile aynı Agent Skills açık standardını benimsemiştir.
 
@@ -466,7 +500,7 @@ dependencies:
       value: "toolName"
 ```
 
-### 6.6 Yakınsama Eğilimi
+### 7.6 Yakınsama Eğilimi
 
 2025-2026 döneminde üç önemli eğilim gözlemlenmektedir:
 
@@ -482,7 +516,7 @@ dependencies:
 
 ---
 
-## 7. Sonuç ve Öneriler
+## 8. Sonuç ve Öneriler
 
 ### Gas Town Skill Sistemi İçin Öneriler
 
@@ -511,7 +545,7 @@ dependencies:
 
 ---
 
-## 8. Kaynaklar
+## 9. Kaynaklar
 
 ### Steve Yegge Yazıları
 - [Welcome to Gas Town](https://steve-yegge.medium.com/welcome-to-gas-town-4f25ee16dd04) — Gas Town tanıtımı ve felsefesi
