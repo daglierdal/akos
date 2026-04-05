@@ -21,14 +21,14 @@ export interface UploadableDriveFile {
 }
 
 export async function getDriveClient(supabase: DbClient, tenantId: string) {
-  const { data: connection, error } = await supabase
+  const { data: connection, error } = await (supabase as any)
     .from("external_connections")
     .select(
       "access_token_encrypted, refresh_token_encrypted, expires_at, scope, token_type"
     )
     .eq("tenant_id", tenantId)
     .eq("provider", "google_drive")
-    .maybeSingle();
+    .maybeSingle() as { data: Record<string, any> | null; error: any };
 
   if (error) {
     throw new Error(`Drive connection lookup failed: ${error.message}`);
