@@ -8,7 +8,7 @@ import { openai } from "@ai-sdk/openai";
 import { getTools } from "@/lib/ai/tools";
 import { saveChatMessage, saveChatSession } from "@/lib/chat/chat-store";
 import { buildChatTitle, getMessageText } from "@/lib/chat/chat-ui";
-import { createServerClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 const SYSTEM_PROMPT = `Sen AkOs yapay zeka asistanısın. AkOs, inşaat ve proje yönetimi için AI-first bir platformdur.
 
@@ -26,51 +26,8 @@ Mevcut yeteneklerin:
 Kullanıcı bir proje oluşturmak istediğinde createProject tool'unu kullan.
 Kullanıcı dashboard veya genel özet istediğinde getDashboard tool'unu kullan.`;
 
-async function resolvePersistenceContext() {
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError) {
-    throw authError;
-  }
-
-  if (!user?.email) {
-    return null;
-  }
-
-  const tenantId = user.app_metadata?.tenant_id;
-
-  if (typeof tenantId !== "string") {
-    return null;
-  }
-
-  const { data: publicUser, error: userError } = await supabase
-    .from("users")
-    .select("id")
-    .eq("email", user.email)
-    .eq("tenant_id", tenantId)
-    .maybeSingle();
-
-  if (userError) {
-    throw userError;
-  }
-
-  if (!publicUser) {
-    return null;
-  }
-
-  return {
-    supabase,
-    tenantId,
-    userId: publicUser.id,
-  };
-}
-
 export async function POST(req: Request) {
-  const supabase = await createServerClient();
+  const supabase = await createClient();
 
   const {
     data: { session },
@@ -88,6 +45,8 @@ export async function POST(req: Request) {
     );
   }
 
+  const userId = session.user.id;
+
   const {
     messages,
     sessionId,
@@ -98,30 +57,23 @@ export async function POST(req: Request) {
     title?: string;
   } = await req.json();
 
-  let persistenceContext = null;
-
-  try {
-    persistenceContext = await resolvePersistenceContext();
-  } catch (error) {
-    console.error("Chat persistence context could not be resolved.", error);
-  }
-
+  // Persist incoming user message
   const latestUserMessage = [...messages]
     .reverse()
     .find((message) => message.role === "user");
 
-  if (persistenceContext && sessionId && latestUserMessage) {
+  if (sessionId && latestUserMessage) {
     try {
-      await saveChatSession(persistenceContext.supabase, {
+      await saveChatSession(supabase, {
         id: sessionId,
-        tenantId: persistenceContext.tenantId,
-        userId: persistenceContext.userId,
+        tenantId,
+        userId,
         title: title ?? buildChatTitle(getMessageText(latestUserMessage)),
       });
 
-      await saveChatMessage(persistenceContext.supabase, {
+      await saveChatMessage(supabase, {
         sessionId,
-        tenantId: persistenceContext.tenantId,
+        tenantId,
         role: "user",
         content: getMessageText(latestUserMessage),
       });
@@ -137,7 +89,7 @@ export async function POST(req: Request) {
     tools: getTools({
       supabase,
       tenantId,
-      userId: session.user.id,
+      userId,
     }),
     stopWhen: stepCountIs(3),
   });
@@ -149,14 +101,14 @@ export async function POST(req: Request) {
       return "Bir hata oluştu.";
     },
     async onFinish({ responseMessage }) {
-      if (!persistenceContext || !sessionId) {
+      if (!sessionId) {
         return;
       }
 
       try {
-        await saveChatMessage(persistenceContext.supabase, {
+        await saveChatMessage(supabase, {
           sessionId,
-          tenantId: persistenceContext.tenantId,
+          tenantId,
           role: "assistant",
           content: getMessageText(responseMessage),
         });
