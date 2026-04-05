@@ -5,6 +5,7 @@ import {
   createDriveFolder,
   getDashboard,
   searchDocuments,
+  uploadDocument,
   getTools,
 } from "../index";
 import { z } from "zod";
@@ -44,6 +45,11 @@ describe("tool registry exports", () => {
     expect(searchDocuments.name).toBe("searchDocuments");
   });
 
+  it("should export uploadDocument", () => {
+    expect(uploadDocument).toBeDefined();
+    expect(uploadDocument.name).toBe("uploadDocument");
+  });
+
   it("should build AI SDK tools from the shared registry", () => {
     const tools = getTools({
       supabase: {} as never,
@@ -55,5 +61,7 @@ describe("tool registry exports", () => {
     expect(tools.createDriveFolder).toBeDefined();
     expect(tools.getDashboard).toBeDefined();
     expect(tools.searchDocuments).toBeDefined();
+    expect(tools.searchDocuments).toBeDefined();
+    expect(tools.uploadDocument).toBeDefined();
   });
 });

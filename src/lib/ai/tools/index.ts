@@ -10,16 +10,15 @@ import {
   type ToolContext,
   type ToolDefinition,
 } from "./tool-definition";
+import { uploadDocument } from "./uploadDocument";
 
-export interface ToolsContext extends ToolContext {
-  supabase: SupabaseClient;
-}
-
+export interface ToolsContext extends ToolContext {}
 const registry = [
   createProject,
   createDriveFolder,
   getDashboard,
   searchDocuments,
+  uploadDocument,
 ] as const;
 
 export function getTools(context: ToolsContext): ToolSet {
@@ -36,6 +35,12 @@ export function getTools(context: ToolsContext): ToolSet {
   ) as ToolSet;
 }
 
-export { createProject, createDriveFolder, getDashboard, searchDocuments };
+export {
+  createProject,
+  createDriveFolder,
+  getDashboard,
+  searchDocuments,
+  uploadDocument,
+};
 export { defineTool };
 export type { ToolContext, ToolDefinition };
