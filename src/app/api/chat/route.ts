@@ -79,7 +79,12 @@ export async function POST(req: Request) {
         content: getMessageText(latestUserMessage),
       });
     } catch (error) {
-      console.error("Incoming chat message could not be persisted.", error);
+      console.error("[CHAT_PERSIST_FAIL]", {
+        sessionId,
+        tenantId,
+        phase: "incoming-user-message",
+        error: error instanceof Error ? error.message : String(error),
+      });
       persistenceFailed = true;
     }
   }
@@ -115,7 +120,12 @@ export async function POST(req: Request) {
           content: getMessageText(responseMessage),
         });
       } catch (error) {
-        console.error("Assistant chat message could not be persisted.", error);
+        console.error("[CHAT_PERSIST_FAIL]", {
+          sessionId,
+          tenantId,
+          phase: "assistant-message",
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     },
   });

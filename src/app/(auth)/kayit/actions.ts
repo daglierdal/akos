@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { signup } from "@/lib/auth/signup";
+import { createClient } from "@/lib/supabase/server";
 
 export type SignupActionState = {
   error: string | null;
@@ -32,5 +33,19 @@ export async function signupAction(
     return { error: result.error };
   }
 
-  redirect("/giris");
+  const supabase = await createClient();
+  const { error: refreshError } = await supabase.auth.refreshSession();
+
+  if (refreshError) {
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (signInError) {
+      return { error: signInError.message };
+    }
+  }
+
+  redirect("/dashboard");
 }

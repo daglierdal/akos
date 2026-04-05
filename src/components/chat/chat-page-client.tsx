@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { PanelRight } from "lucide-react";
-import type { UIMessage } from "ai";
+import { DefaultChatTransport, type UIMessage } from "ai";
 import { ChatSidebar } from "@/components/chat/chat-sidebar";
 import { ChatMessages } from "@/components/chat/chat-messages";
 import { ChatInput } from "@/components/chat/chat-input";
@@ -31,6 +31,7 @@ export function ChatPageClient({
   initialSessions,
 }: ChatPageClientProps) {
   const supabaseRef = useRef(createClient());
+  const [persistenceWarning, setPersistenceWarning] = useState(false);
   const [sessions, setSessions] = useState(initialSessions);
   const [activeSessionId, setActiveSessionId] = useState(
     initialSessionId ?? createChatSessionId(),
@@ -44,6 +45,16 @@ export function ChatPageClient({
 
   const { messages, sendMessage, setMessages, status } = useChat({
     id: activeSessionId,
+    transport: new DefaultChatTransport({
+      api: "/api/chat",
+      fetch: async (input, init) => {
+        const response = await fetch(input, init);
+        setPersistenceWarning(
+          response.headers.get("X-Chat-Persistence") === "failed",
+        );
+        return response;
+      },
+    }),
     onFinish: async () => {
       await refreshSessions();
     },
@@ -82,6 +93,7 @@ export function ChatPageClient({
   async function handleSelectSession(id: string) {
     setActiveSessionId(id);
     setInputValue("");
+    setPersistenceWarning(false);
 
     const cachedMessages = messageCache[id];
     if (cachedMessages) {
@@ -111,6 +123,7 @@ export function ChatPageClient({
     const nextId = createChatSessionId();
     setActiveSessionId(nextId);
     setInputValue("");
+    setPersistenceWarning(false);
     setMessages([]);
   }
 
@@ -150,6 +163,7 @@ export function ChatPageClient({
     }
 
     setInputValue("");
+    setPersistenceWarning(false);
 
     await sendMessage(
       { text },
@@ -181,9 +195,14 @@ export function ChatPageClient({
 
       <div className="flex flex-1 flex-col">
         <div className="flex items-center justify-between border-b border-border px-4 py-2">
-          <h1 className="text-sm font-medium text-muted-foreground">
-            {activeTitle}
-          </h1>
+          <div className="flex min-w-0 flex-col">
+            <h1 className="truncate text-sm font-medium text-muted-foreground">
+              {activeTitle}
+            </h1>
+            {persistenceWarning ? (
+              <p className="text-xs text-amber-600">Mesaj kaydedilemedi.</p>
+            ) : null}
+          </div>
           <Button
             variant="ghost"
             size="icon"
