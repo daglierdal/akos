@@ -41,3 +41,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+.land-worktree/
+
+# gt runtime state (must not be tracked — causes stale locks in worktrees)
+.runtime/
