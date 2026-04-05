@@ -6,6 +6,7 @@ import { createServerClient } from "@/lib/supabase/server";
 type SignupInput = {
   companyName: string;
   email: string;
+  name: string;
   password: string;
 };
 
@@ -66,10 +67,12 @@ async function buildUniqueTenantSlug(baseName: string) {
 export async function signup({
   companyName,
   email,
+  name,
   password,
 }: SignupInput): Promise<SignupResult> {
   const normalizedCompanyName = companyName.trim();
   const normalizedEmail = email.trim();
+  const normalizedName = name.trim();
 
   if (!normalizedCompanyName) {
     return { success: false, error: "Şirket adı zorunlu." };
@@ -132,6 +135,18 @@ export async function signup({
 
     if (membershipError) {
       throw new Error(membershipError.message);
+    }
+
+    const { error: userInsertError } = await admin.from("users").insert({
+      id: userId,
+      tenant_id: tenantId,
+      email: normalizedEmail,
+      full_name: normalizedName,
+      role: "admin",
+    });
+
+    if (userInsertError) {
+      throw new Error(userInsertError.message);
     }
 
     return { success: true, tenantId };

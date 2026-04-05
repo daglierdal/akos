@@ -12,6 +12,7 @@ export async function signupAction(
   formData: FormData
 ): Promise<SignupActionState> {
   const companyName = String(formData.get("companyName") ?? "");
+  const name = String(formData.get("name") ?? "");
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
@@ -23,6 +24,7 @@ export async function signupAction(
   const result = await signup({
     companyName,
     email,
+    name,
     password,
   });
 
@@ -30,5 +32,5 @@ export async function signupAction(
     return { error: result.error };
   }
 
-  redirect("/dashboard");
+  redirect("/giris");
 }

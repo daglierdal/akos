@@ -28,6 +28,7 @@ Kullanıcı dashboard veya genel özet istediğinde getDashboard tool'unu kullan
 
 export async function POST(req: Request) {
   const supabase = await createClient();
+  let persistenceFailed = false;
 
   const {
     data: { session },
@@ -79,6 +80,7 @@ export async function POST(req: Request) {
       });
     } catch (error) {
       console.error("Incoming chat message could not be persisted.", error);
+      persistenceFailed = true;
     }
   }
 
@@ -94,7 +96,7 @@ export async function POST(req: Request) {
     stopWhen: stepCountIs(3),
   });
 
-  return result.toUIMessageStreamResponse({
+  const response = result.toUIMessageStreamResponse({
     originalMessages: messages,
     onError(error) {
       console.error("Chat streaming failed.", error);
@@ -117,4 +119,10 @@ export async function POST(req: Request) {
       }
     },
   });
+
+  if (persistenceFailed) {
+    response.headers.set("X-Chat-Persistence", "failed");
+  }
+
+  return response;
 }
