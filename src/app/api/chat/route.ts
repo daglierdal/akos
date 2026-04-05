@@ -1,30 +1,120 @@
 import {
-  createUIMessageStreamResponse,
-  createUIMessageStream,
+  convertToModelMessages,
+  streamText,
+  stepCountIs,
+  type UIMessage,
 } from "ai";
+import { openai } from "@ai-sdk/openai";
+import { getTools } from "@/lib/ai/tools";
+import { saveChatMessage, saveChatSession } from "@/lib/chat/chat-store";
+import { buildChatTitle, getMessageText } from "@/lib/chat/chat-ui";
+import { createClient } from "@/lib/supabase/server";
 
-function getMockResponse(): string {
-  const responses = [
-    "Merhaba! Size nasıl yardımcı olabilirim? AkOs proje yönetim sistemi hakkında sorularınızı yanıtlayabilirim. Projeleriniz, müşterileriniz, teklifler veya hakediş süreçleri hakkında bilgi almak isterseniz sormaktan çekinmeyin.",
-    "Bu harika bir soru! İnşaat projelerinde maliyet kontrolü için birkaç önerim var:\n\n1. **BOQ takibi** — Her iş kalemini düzenli kontrol edin\n2. **Hakediş planlaması** — Aylık hakediş dönemlerini takip edin\n3. **Taşeron yönetimi** — Sözleşme koşullarını net belirleyin\n4. **Satınalma optimizasyonu** — Toplu alım avantajlarını değerlendirin\n\nDaha detaylı bilgi ister misiniz?",
-    "Tabii ki! İşte proje zaman çizelgesi oluşturma adımları:\n\n- Projenin kapsamını ve iş kırılım yapısını belirleyin\n- Her bir aktivite için süre tahminlerini yapın\n- Kritik yol analizini gerçekleştirin\n- Kaynak planlamasını yapın\n- Gantt şemasını oluşturun\n\nBu konuda AkOs sistemi size otomatik raporlama ve takip imkanı sunuyor.",
-    "Hakediş süreci hakkında bilgi vermeme sevindim. Genel adımlar şunlardır:\n\n1. Saha ölçümleri yapılır\n2. İş kalemleri ve miktarlar doğrulanır\n3. Birim fiyatlar uygulanır\n4. Kesintiler ve avanslar hesaplanır\n5. Hakediş raporu oluşturulur\n6. Onay sürecine sunulur\n\nSistem üzerinden tüm bu adımları kolayca takip edebilirsiniz.",
-  ];
-  return responses[Math.floor(Math.random() * responses.length)];
-}
+const SYSTEM_PROMPT = `Sen AkOs yapay zeka asistanısın. AkOs, inşaat ve proje yönetimi için AI-first bir platformdur.
 
-export async function POST() {
-  const text = getMockResponse();
-  const words = text.split(" ");
+Görevlerin:
+- Kullanıcıların projelerini yönetmelerine yardımcı ol
+- Proje oluşturma, dashboard görüntüleme gibi işlemleri tool'lar aracılığıyla yap
+- Türkçe yanıt ver (kullanıcı İngilizce yazarsa İngilizce yanıt ver)
+- Kısa ve net cevaplar ver
+- İnşaat sektörüne özel terimleri doğru kullan
 
-  const stream = createUIMessageStream({
-    execute: async ({ writer }) => {
-      for (const word of words) {
-        writer.write({ type: "text-delta", delta: word + " ", id: "msg-1" });
-        await new Promise((r) => setTimeout(r, 30 + Math.random() * 50));
+Mevcut yeteneklerin:
+- createProject: Yeni proje oluşturma
+- getDashboard: Dashboard özet verilerini getirme
+
+Kullanıcı bir proje oluşturmak istediğinde createProject tool'unu kullan.
+Kullanıcı dashboard veya genel özet istediğinde getDashboard tool'unu kullan.`;
+
+export async function POST(req: Request) {
+  const supabase = await createClient();
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const tenantId = session.user.app_metadata?.tenant_id;
+  if (typeof tenantId !== "string" || tenantId.length === 0) {
+    return Response.json(
+      { error: "Tenant context is missing from session" },
+      { status: 403 }
+    );
+  }
+
+  const userId = session.user.id;
+
+  const {
+    messages,
+    sessionId,
+    title,
+  }: {
+    messages: UIMessage[];
+    sessionId?: string;
+    title?: string;
+  } = await req.json();
+
+  // Persist incoming user message
+  const latestUserMessage = [...messages]
+    .reverse()
+    .find((message) => message.role === "user");
+
+  if (sessionId && latestUserMessage) {
+    try {
+      await saveChatSession(supabase, {
+        id: sessionId,
+        tenantId,
+        userId,
+        title: title ?? buildChatTitle(getMessageText(latestUserMessage)),
+      });
+
+      await saveChatMessage(supabase, {
+        sessionId,
+        tenantId,
+        role: "user",
+        content: getMessageText(latestUserMessage),
+      });
+    } catch (error) {
+      console.error("Incoming chat message could not be persisted.", error);
+    }
+  }
+
+  const result = streamText({
+    model: openai("gpt-4o-mini"),
+    system: SYSTEM_PROMPT,
+    messages: await convertToModelMessages(messages),
+    tools: getTools({
+      supabase,
+      tenantId,
+      userId,
+    }),
+    stopWhen: stepCountIs(3),
+  });
+
+  return result.toUIMessageStreamResponse({
+    originalMessages: messages,
+    onError(error) {
+      console.error("Chat streaming failed.", error);
+      return "Bir hata oluştu.";
+    },
+    async onFinish({ responseMessage }) {
+      if (!sessionId) {
+        return;
+      }
+
+      try {
+        await saveChatMessage(supabase, {
+          sessionId,
+          tenantId,
+          role: "assistant",
+          content: getMessageText(responseMessage),
+        });
+      } catch (error) {
+        console.error("Assistant chat message could not be persisted.", error);
       }
     },
   });
-
-  return createUIMessageStreamResponse({ stream });
 }
