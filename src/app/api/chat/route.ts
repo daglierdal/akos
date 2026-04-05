@@ -27,10 +27,12 @@ Mevcut yeteneklerin:
 - createProject: Yeni proje oluşturma
 - createDriveFolder: Google Drive'da proje klasor yapisi olusturma
 - getDashboard: Dashboard özet verilerini getirme
+- searchDocuments: Belgelerde tam metin arama yapma
 
 Kullanıcı bir proje oluşturmak istediğinde createProject tool'unu kullan.
 Kullanıcı Google Drive klasoru veya proje klasor yapisi istediginde createDriveFolder tool'unu kullan.
-Kullanıcı dashboard veya genel özet istediğinde getDashboard tool'unu kullan.`;
+Kullanıcı dashboard veya genel özet istediğinde getDashboard tool'unu kullan.
+Kullanıcı belge, şartname, keşif, sözleşme veya yüklenen dosyalarda arama istediğinde searchDocuments tool'unu kullan.`;
 
 export async function POST(req: Request) {
   const supabase = await createClient();

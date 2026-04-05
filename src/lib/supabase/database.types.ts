@@ -1460,7 +1460,24 @@ export interface Database {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      search_documents_full_text: {
+        Args: {
+          p_project_id?: string | null;
+          p_query: string;
+        };
+        Returns: {
+          id: string;
+          title: string | null;
+          project_id: string | null;
+          original_filename: string | null;
+          mime_type: string | null;
+          created_at: string;
+          rank: number;
+          snippet: string | null;
+        }[];
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

@@ -1,38 +1,26 @@
 import { tool } from "ai";
 import type { ToolSet } from "ai";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { z } from "zod";
 import { createProject } from "./createProject";
 import { createDriveFolder } from "./createDriveFolder";
 import { getDashboard } from "./getDashboard";
-
-export interface ToolContext {
-  supabase: Pick<SupabaseClient, "from">;
-  tenantId: string;
-  userId: string;
-}
+import { searchDocuments } from "./searchDocuments";
+import {
+  defineTool,
+  type ToolContext,
+  type ToolDefinition,
+} from "./tool-definition";
 
 export interface ToolsContext extends ToolContext {
   supabase: SupabaseClient;
 }
 
-export interface ToolDefinition<TParams extends z.ZodType, TResult> {
-  name: string;
-  description: string;
-  parameters: TParams;
-  execute: (
-    params: z.infer<TParams>,
-    context: ToolContext
-  ) => Promise<TResult>;
-}
-
-export function defineTool<TParams extends z.ZodType, TResult>(
-  toolDefinition: ToolDefinition<TParams, TResult>
-): ToolDefinition<TParams, TResult> {
-  return toolDefinition;
-}
-
-const registry = [createProject, createDriveFolder, getDashboard] as const;
+const registry = [
+  createProject,
+  createDriveFolder,
+  getDashboard,
+  searchDocuments,
+] as const;
 
 export function getTools(context: ToolsContext): ToolSet {
   return Object.fromEntries(
@@ -48,4 +36,6 @@ export function getTools(context: ToolsContext): ToolSet {
   ) as ToolSet;
 }
 
-export { createProject, createDriveFolder, getDashboard };
+export { createProject, createDriveFolder, getDashboard, searchDocuments };
+export { defineTool };
+export type { ToolContext, ToolDefinition };
