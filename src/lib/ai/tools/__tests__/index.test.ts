@@ -1,10 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  defineTool,
-  createProject,
-  getDashboard,
-  getTools,
-} from "../index";
+import { defineTool, createProject, getDashboard } from "../index";
 import { z } from "zod";
 
 describe("defineTool", () => {
@@ -13,7 +8,7 @@ describe("defineTool", () => {
       name: "testTool",
       description: "A test tool",
       parameters: z.object({ input: z.string() }),
-      execute: async (params, _context) => ({ echo: params.input }),
+      execute: async (params) => ({ echo: params.input }),
     });
 
     expect(tool.name).toBe("testTool");
@@ -30,16 +25,5 @@ describe("tool registry exports", () => {
   it("should export getDashboard", () => {
     expect(getDashboard).toBeDefined();
     expect(getDashboard.name).toBe("getDashboard");
-  });
-
-  it("should build AI SDK tools from the shared registry", () => {
-    const tools = getTools({
-      supabase: {} as never,
-      tenantId: "tenant-1",
-      userId: "user-1",
-    });
-
-    expect(tools.createProject).toBeDefined();
-    expect(tools.getDashboard).toBeDefined();
   });
 });

@@ -1,16 +1,22 @@
 "use client";
 
-import { Plus, MessageSquare } from "lucide-react";
+import { Plus, MessageSquare, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import type { ChatSessionListItem } from "@/lib/chat/chat-ui";
+
+export interface ChatSession {
+  id: string;
+  title: string;
+  createdAt: Date;
+}
 
 interface ChatSidebarProps {
-  sessions: ChatSessionListItem[];
+  sessions: ChatSession[];
   activeSessionId: string | null;
   onSelectSession: (id: string) => void;
   onNewSession: () => void;
+  onDeleteSession: (id: string) => void;
 }
 
 export function ChatSidebar({
@@ -18,6 +24,7 @@ export function ChatSidebar({
   activeSessionId,
   onSelectSession,
   onNewSession,
+  onDeleteSession,
 }: ChatSidebarProps) {
   return (
     <div className="flex h-full w-64 flex-col border-r border-border bg-sidebar">
@@ -55,6 +62,16 @@ export function ChatSidebar({
             >
               <MessageSquare className="h-4 w-4 shrink-0" />
               <span className="flex-1 truncate">{session.title}</span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteSession(session.id);
+                }}
+                className="hidden shrink-0 rounded p-0.5 text-muted-foreground hover:text-destructive group-hover:block"
+                title="Sil"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
             </button>
           ))}
         </div>
