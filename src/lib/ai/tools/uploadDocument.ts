@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  assertTenantPermission,
+  canUploadDocument,
+} from "@/lib/auth/permissions";
 import { getDriveClient } from "@/lib/drive/client";
 import { uploadDocument as uploadDocumentService } from "@/lib/documents/upload-service";
 import { defineTool, type ToolDefinition } from "./tool-definition";
@@ -28,6 +32,14 @@ export const uploadDocument: ToolDefinition<
   description: "Dosya yukler, kategorize eder ve uygun depolama/klasore yerlestirir.",
   parameters,
   execute: async (params, context) => {
+    await assertTenantPermission(
+      context.supabase,
+      context.tenantId,
+      context.userId,
+      canUploadDocument,
+      "Dokuman yukleme yetkiniz yok.",
+    );
+
     const driveClient = await getDriveClient(context.supabase, context.tenantId).catch(
       () => null
     );

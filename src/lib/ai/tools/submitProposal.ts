@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { assertPermission, canSubmitProposal } from "@/lib/auth/permissions";
+import {
+  assertTenantPermission,
+  canSubmitProposal,
+} from "@/lib/auth/permissions";
 import { getDriveClient } from "@/lib/drive/client";
 import {
   generateProposalPDF,
@@ -28,8 +31,11 @@ export const submitProposal: ToolDefinition<
   needsApproval: true,
   parameters,
   execute: async (params, context) => {
-    assertPermission(
-      canSubmitProposal(context.role),
+    await assertTenantPermission(
+      context.supabase,
+      context.tenantId,
+      context.userId,
+      canSubmitProposal,
       "Teklif gonderme yetkiniz yok.",
     );
 

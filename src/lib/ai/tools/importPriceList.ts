@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  assertTenantPermission,
+  canImportPriceList,
+} from "@/lib/auth/permissions";
 import { importPriceList as importPriceListService } from "@/lib/boq/price-service";
 import { defineTool } from "./tool-definition";
 
@@ -14,6 +18,14 @@ export const importPriceList = defineTool({
   needsApproval: true,
   parameters,
   execute: async (params, context) => {
+    await assertTenantPermission(
+      context.supabase,
+      context.tenantId,
+      context.userId,
+      canImportPriceList,
+      "Fiyat listesi ice aktarma yetkiniz yok.",
+    );
+
     const file = new File([Buffer.from(params.contentBase64, "base64")], params.fileName, {
       type: params.mimeType,
     });

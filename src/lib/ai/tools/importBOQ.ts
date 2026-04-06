@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { assertTenantPermission, canImportBOQ } from "@/lib/auth/permissions";
 import { importBOQFromExcel } from "@/lib/boq/import-service";
 import { defineTool } from "./tool-definition";
 
@@ -15,6 +16,14 @@ export const importBOQ = defineTool({
   needsApproval: true,
   parameters,
   execute: async (params, context) => {
+    await assertTenantPermission(
+      context.supabase,
+      context.tenantId,
+      context.userId,
+      canImportBOQ,
+      "BOQ ice aktarma yetkiniz yok.",
+    );
+
     const file = new File([Buffer.from(params.contentBase64, "base64")], params.fileName, {
       type: params.mimeType,
     });

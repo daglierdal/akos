@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { canCreateProject, assertPermission } from "@/lib/auth/permissions";
+import {
+  assertTenantPermission,
+  canCreateProject,
+} from "@/lib/auth/permissions";
 import { generateProjectCode } from "@/lib/projects/project-code";
 import { createDriveFolder } from "./createDriveFolder";
 import type { ToolContext, ToolDefinition } from "./index";
@@ -48,8 +51,11 @@ export const createProject: ToolDefinition<
     params,
     context: ToolContext
   ): Promise<CreateProjectResult> => {
-    assertPermission(
-      canCreateProject(context.role),
+    await assertTenantPermission(
+      context.supabase,
+      context.tenantId,
+      context.userId,
+      canCreateProject,
       "Proje olusturma yetkiniz yok.",
     );
 

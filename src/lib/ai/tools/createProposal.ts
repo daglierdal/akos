@@ -1,5 +1,9 @@
 import { z } from "zod";
 import {
+  assertTenantPermission,
+  canCreateProposal,
+} from "@/lib/auth/permissions";
+import {
   createProposal as createProposalService,
   reviseProposal as reviseProposalService,
 } from "@/lib/proposals/proposal-service";
@@ -33,6 +37,14 @@ export const createProposal: ToolDefinition<
   needsApproval: true,
   parameters,
   execute: async (params, context) => {
+    await assertTenantPermission(
+      context.supabase,
+      context.tenantId,
+      context.userId,
+      canCreateProposal,
+      "Teklif olusturma yetkiniz yok.",
+    );
+
     if (params.proposalId) {
       const proposal = await reviseProposalService(context.supabase, params.proposalId);
 

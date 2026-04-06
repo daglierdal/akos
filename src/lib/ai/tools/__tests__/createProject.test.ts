@@ -30,6 +30,29 @@ function createMockContext(options?: {
     role: options?.role ?? "admin",
     supabase: {
       from(table: string) {
+        if (table === "tenant_memberships") {
+          return {
+            select() {
+              return {
+                eq(_column: string, _value: string) {
+                  return {
+                    eq(_nestedColumn: string, _nestedValue: string) {
+                      return {
+                        maybeSingle() {
+                          return Promise.resolve({
+                            data: { role: options?.role ?? "admin" },
+                            error: null,
+                          });
+                        },
+                      };
+                    },
+                  };
+                },
+              };
+            },
+          };
+        }
+
         if (table === "customers") {
           return {
             select() {
