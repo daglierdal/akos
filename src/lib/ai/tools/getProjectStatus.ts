@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { assertPermission, canViewAllProjects } from "@/lib/auth/permissions";
-import { extractProjectCodeFromLabel } from "@/lib/drive/drive-files";
 import { defineTool, type ToolContext } from "./tool-definition";
 
 const parameters = z.object({
@@ -31,7 +30,9 @@ export const getProjectStatus = defineTool({
     ] = await Promise.all([
       context.supabase
         .from("projects")
-        .select("id, name, description, status, budget, currency, created_at, updated_at")
+        .select(
+          "id, project_code, name, description, status, budget, currency, created_at, updated_at",
+        )
         .eq("id", params.projectId)
         .single(),
       context.supabase
@@ -104,7 +105,7 @@ export const getProjectStatus = defineTool({
         status: project.status,
         budget: project.budget === null ? null : Number(project.budget),
         currency: project.currency,
-        code: extractProjectCodeFromLabel(typedRootFolder?.revision_label) ?? null,
+        code: project.project_code,
         customer: typedRootFolder?.discipline ?? null,
         createdAt: project.created_at,
         updatedAt: project.updated_at,

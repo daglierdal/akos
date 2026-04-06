@@ -2,7 +2,6 @@ import { Readable } from "node:stream";
 import type { drive_v3 } from "googleapis";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createFolder, uploadFile } from "@/lib/drive/client";
-import { extractProjectCodeFromLabel } from "@/lib/drive/drive-files";
 import type { Database } from "@/lib/supabase/database.types";
 import {
   resolveDriveRouting,
@@ -76,7 +75,7 @@ type JsonObject = Record<string, unknown>;
 type TypedSupabase = SupabaseClient<Database>;
 type DbRow = Database["public"]["Tables"];
 
-type ProjectLookup = Pick<DbRow["projects"]["Row"], "id" | "name">;
+type ProjectLookup = Pick<DbRow["projects"]["Row"], "id" | "name" | "project_code">;
 
 export interface UploadTarget {
   kind: "supabase" | "drive";
@@ -114,7 +113,6 @@ interface StoredFileResult {
 interface ProjectContext {
   project: ProjectLookup;
   tenantId: string;
-  tenantPrefix: string;
   projectCode: string;
   rootFolder: DriveFolderRecord | null;
 }
@@ -149,24 +147,9 @@ function stripExtension(fileName: string) {
   return fileName.replace(/\.[^.]+$/, "");
 }
 
-function tokenize(input: string) {
-  return input
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-}
-
 function includesAny(text: string, hints: string[]) {
   const haystack = text.toLowerCase();
   return hints.filter((hint) => haystack.includes(hint));
-}
-
-function buildProjectCode(projectName: string, tenantPrefix: string) {
-  const tokens = tokenize(projectName).slice(0, 3);
-  const initials = tokens.map((token) => token[0]?.toUpperCase() ?? "").join("");
-  return `${tenantPrefix || "PRJ"}-${initials || "GEN"}`;
 }
 
 function sanitizeSegment(value: string) {
@@ -216,27 +199,15 @@ async function getProjectContext(
   projectId: string,
   tenantId: string
 ): Promise<ProjectContext> {
-  const [{ data: project, error: projectError }, { data: tenant, error: tenantError }] =
-    await Promise.all([
-      supabase
-        .from("projects")
-        .select("id, name")
-        .eq("id", projectId)
-        .eq("tenant_id", tenantId)
-        .single(),
-      supabase
-        .from("tenants")
-        .select("project_code_prefix")
-        .eq("id", tenantId)
-        .single(),
-    ]);
+  const { data: project, error: projectError } = await supabase
+    .from("projects")
+    .select("id, name, project_code")
+    .eq("id", projectId)
+    .eq("tenant_id", tenantId)
+    .single();
 
   if (projectError || !project) {
     throw new Error(projectError?.message ?? "Project not found.");
-  }
-
-  if (tenantError || !tenant) {
-    throw new Error(tenantError?.message ?? "Tenant not found.");
   }
 
   const driveQuery = (supabase as any)
@@ -272,10 +243,7 @@ async function getProjectContext(
   return {
     project,
     tenantId,
-    tenantPrefix: tenant.project_code_prefix,
-    projectCode:
-      extractProjectCodeFromLabel(rootFolder?.revision_label) ??
-      buildProjectCode(project.name, tenant.project_code_prefix),
+    projectCode: project.project_code,
     rootFolder,
   };
 }

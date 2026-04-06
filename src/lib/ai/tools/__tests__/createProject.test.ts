@@ -16,6 +16,7 @@ function createMockContext(options?: {
   const insertedCustomer = { id: "customer-2", name: "XYZ Holding" };
   const insertedProject = {
     id: "project-1",
+    project_code: "AKR-2026-0013",
     name: "Konut A Blok",
     description: null,
     budget: null,
@@ -91,13 +92,17 @@ function createMockContext(options?: {
             select(_value: string, queryOptions?: { count?: string; head?: boolean }) {
               if (queryOptions?.head) {
                 return {
-                  gte() {
+                  eq() {
                     return {
-                      lt() {
-                        return Promise.resolve({
-                          count: 12,
-                          error: null,
-                        });
+                      gte() {
+                        return {
+                          lt() {
+                            return Promise.resolve({
+                              count: 12,
+                              error: null,
+                            });
+                          },
+                        };
                       },
                     };
                   },
@@ -107,6 +112,7 @@ function createMockContext(options?: {
               throw new Error("Unexpected projects select");
             },
             insert(payload: {
+              project_code: string;
               name: string;
               description: string | null;
               budget: number | null;
@@ -119,6 +125,7 @@ function createMockContext(options?: {
                       return Promise.resolve({
                         data: {
                           ...insertedProject,
+                          project_code: payload.project_code,
                           name: payload.name,
                           description: payload.description,
                           budget: payload.budget,

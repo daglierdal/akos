@@ -129,12 +129,6 @@ function tokenize(input: string) {
     .filter(Boolean);
 }
 
-function buildProjectCode(projectName: string, tenantPrefix: string) {
-  const tokens = tokenize(projectName).slice(0, 3);
-  const initials = tokens.map((token) => token[0]?.toUpperCase() ?? "").join("");
-  return `${tenantPrefix || "PRJ"}-${initials || "GEN"}`;
-}
-
 function getRevisionCode(revisionNo: number) {
   return `REV-${String(revisionNo).padStart(2, "0")}`;
 }
@@ -290,13 +284,13 @@ async function getProjectContext(
     await Promise.all([
       supabase
         .from("projects")
-        .select("id, name")
+        .select("id, name, project_code")
         .eq("id", projectId)
         .eq("tenant_id", tenantId)
         .single(),
       supabase
         .from("tenants")
-        .select("id, name, project_code_prefix")
+        .select("id, name")
         .eq("id", tenantId)
         .single(),
     ]);
@@ -314,7 +308,7 @@ async function getProjectContext(
     projectName: project.name,
     tenantId,
     tenantName: tenant.name,
-    projectCode: buildProjectCode(project.name, tenant.project_code_prefix),
+    projectCode: project.project_code,
   };
 }
 

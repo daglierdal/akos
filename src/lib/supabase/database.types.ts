@@ -968,6 +968,7 @@ export interface Database {
           id: string;
           tenant_id: string;
           customer_id: string | null;
+          project_code: string;
           name: string;
           description: string | null;
           status: string;
@@ -982,6 +983,7 @@ export interface Database {
           id?: string;
           tenant_id: string;
           customer_id?: string | null;
+          project_code: string;
           name: string;
           description?: string | null;
           status?: string;
@@ -996,6 +998,7 @@ export interface Database {
           id?: string;
           tenant_id?: string;
           customer_id?: string | null;
+          project_code?: string;
           name?: string;
           description?: string | null;
           status?: string;

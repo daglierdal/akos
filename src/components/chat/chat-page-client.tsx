@@ -295,7 +295,7 @@ export function ChatPageClient({
     </div>
   );
 
-  const teklifPanel = <ProposalSummary />;
+  const teklifPanel = <ProposalSummary projectId={selectedProjectId} />;
 
   const projectInfoPanel = <ProjectPanel projectId={selectedProjectId} />;
 

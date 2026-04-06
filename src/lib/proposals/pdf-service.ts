@@ -449,37 +449,18 @@ function buildSubmittedPdfName(projectCode: string, revisionNo: number) {
 
 async function getProjectCode(
   supabase: TypedSupabase,
-  projectId: string,
-  tenantId: string
+  projectId: string
 ) {
-  const [{ data: project, error: projectError }, { data: tenant, error: tenantError }] =
-    await Promise.all([
-      supabase.from("projects").select("name").eq("id", projectId).single(),
-      supabase
-        .from("tenants")
-        .select("project_code_prefix")
-        .eq("id", tenantId)
-        .single(),
-    ]);
+  const { data: project, error: projectError } = await supabase
+    .from("projects")
+    .select("project_code")
+    .eq("id", projectId)
+    .single();
 
   if (projectError || !project) {
     throw new Error(projectError?.message ?? "Project not found.");
   }
-
-  if (tenantError || !tenant) {
-    throw new Error(tenantError?.message ?? "Tenant not found.");
-  }
-
-  const tokens = project.name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 3);
-  const initials = tokens.map((token) => token[0]?.toUpperCase() ?? "").join("") || "GEN";
-
-  return `${tenant.project_code_prefix || "PRJ"}-${initials}`;
+  return project.project_code;
 }
 
 export async function generateProposalPDF(
@@ -513,11 +494,7 @@ export async function uploadProposalPDF(
 ) {
   const summary = await calculateProposal(supabase, proposalId);
   const proposal = summary.proposal;
-  const projectCode = await getProjectCode(
-    supabase,
-    proposal.project_id,
-    proposal.tenant_id
-  );
+  const projectCode = await getProjectCode(supabase, proposal.project_id);
   const fileName = buildSubmittedPdfName(projectCode, proposal.revision_no);
   const revisionFolderId = proposal.drive_revision_folder_id;
 

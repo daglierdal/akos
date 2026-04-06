@@ -29,6 +29,10 @@ interface ProposalSummaryResponse {
   }>;
 }
 
+interface ProposalSummaryProps {
+  projectId?: string | null;
+}
+
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("tr-TR", {
     style: "currency",
@@ -37,7 +41,7 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
-export function ProposalSummary() {
+export function ProposalSummary({ projectId }: ProposalSummaryProps) {
   const [summary, setSummary] = useState<ProposalSummaryResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,10 +49,27 @@ export function ProposalSummary() {
   const [error, setError] = useState<string | null>(null);
 
   async function loadSummary() {
+    if (projectId === null) {
+      setSummary(null);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/proposals/summary", {
+      const searchParams = new URLSearchParams();
+
+      if (projectId) {
+        searchParams.set("projectId", projectId);
+      }
+
+      const url = searchParams.size > 0
+        ? `/api/proposals/summary?${searchParams.toString()}`
+        : "/api/proposals/summary";
+
+      const response = await fetch(url, {
         method: "GET",
         cache: "no-store",
       });
@@ -77,7 +98,7 @@ export function ProposalSummary() {
 
   useEffect(() => {
     void loadSummary();
-  }, []);
+  }, [projectId]);
 
   async function handleGeneratePdf() {
     if (!summary) {
@@ -159,6 +180,7 @@ export function ProposalSummary() {
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-muted-foreground">
             <p>Henüz teklif bulunmuyor.</p>
+            {projectId === null ? <p>Aktif bir proje secilmedi.</p> : null}
             {error ? <p className="text-destructive">{error}</p> : null}
           </CardContent>
         </Card>

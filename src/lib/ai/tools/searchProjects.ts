@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { assertPermission, canViewAllProjects } from "@/lib/auth/permissions";
-import { extractProjectCodeFromLabel } from "@/lib/drive/drive-files";
 import { defineTool, type ToolContext } from "./tool-definition";
 
 const parameters = z.object({
@@ -13,7 +12,6 @@ const parameters = z.object({
 interface DriveRootFolder {
   project_id?: string | null;
   discipline?: string | null;
-  revision_label?: string | null;
 }
 
 export const searchProjects = defineTool({
@@ -29,7 +27,9 @@ export const searchProjects = defineTool({
 
     let query = context.supabase
       .from("projects")
-      .select("id, name, description, status, budget, currency, created_at, updated_at")
+      .select(
+        "id, project_code, name, description, status, budget, currency, created_at, updated_at",
+      )
       .order("updated_at", { ascending: false })
       .limit(100);
 
@@ -50,7 +50,7 @@ export const searchProjects = defineTool({
         query,
         (context.supabase as any)
           .from("drive_files")
-          .select("project_id, discipline, revision_label")
+          .select("project_id, discipline")
           .eq("file_role", "folder")
           .is("drive_parent_id", null),
       ]);
@@ -73,7 +73,6 @@ export const searchProjects = defineTool({
       .map((project) => {
         const driveRoot = rootByProjectId.get(project.id);
         const customerName = driveRoot?.discipline ?? null;
-        const code = extractProjectCodeFromLabel(driveRoot?.revision_label) ?? null;
 
         return {
           id: project.id,
@@ -83,7 +82,7 @@ export const searchProjects = defineTool({
           budget: project.budget === null ? null : Number(project.budget),
           currency: project.currency,
           customer: customerName,
-          code,
+          code: project.project_code,
           createdAt: project.created_at,
           updatedAt: project.updated_at,
         };

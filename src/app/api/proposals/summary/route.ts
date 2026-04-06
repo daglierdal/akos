@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getProposalSummary } from "@/lib/proposals/proposal-service";
 
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = await createClient();
   const {
     data: { session },
@@ -17,13 +17,21 @@ export async function GET() {
     return Response.json({ error: "Tenant context is missing" }, { status: 403 });
   }
 
-  const { data: proposal, error } = await supabase
+  const { searchParams } = new URL(request.url);
+  const projectId = searchParams.get("projectId")?.trim() || null;
+
+  let proposalQuery = supabase
     .from("proposals")
     .select("id")
     .eq("tenant_id", tenantId)
     .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+
+  if (projectId) {
+    proposalQuery = proposalQuery.eq("project_id", projectId);
+  }
+
+  const { data: proposal, error } = await proposalQuery.maybeSingle();
 
   if (error) {
     return Response.json({ error: error.message }, { status: 500 });

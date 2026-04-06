@@ -95,51 +95,23 @@ export const createProject: ToolDefinition<
       throw new Error("Customer could not be created");
     }
 
-    const currentYear = new Date().getUTCFullYear();
-    const startOfYear = `${currentYear}-01-01T00:00:00.000Z`;
-    const startOfNextYear = `${currentYear + 1}-01-01T00:00:00.000Z`;
-
-    const [
-      { data: tenant, error: tenantError },
-      { count: projectCount, error: projectCountError },
-    ] = await Promise.all([
-      context.supabase
-        .from("tenants")
-        .select("project_code_prefix")
-        .eq("id", context.tenantId)
-        .single(),
-      context.supabase
-        .from("projects")
-        .select("*", { count: "exact", head: true })
-        .gte("created_at", startOfYear)
-        .lt("created_at", startOfNextYear),
-    ]);
-
-    if (tenantError) {
-      throw new Error(`Tenant lookup failed: ${tenantError.message}`);
-    }
-
-    if (projectCountError) {
-      throw new Error(`Project code sequence failed: ${projectCountError.message}`);
-    }
-
-    const projectCode = generateProjectCode({
-      prefix: tenant.project_code_prefix,
-      year: currentYear,
-      sequence: (projectCount ?? 0) + 1,
-    });
+    const projectCode = await generateProjectCode(
+      context.supabase,
+      context.tenantId,
+    );
 
     const { data: project, error: projectInsertError } = await context.supabase
       .from("projects")
       .insert({
         tenant_id: context.tenantId,
+        project_code: projectCode,
         name: projectName,
         customer_id: customer.id,
         description: params.description?.trim() || null,
         budget: params.budget ?? null,
         status: "teklif_asamasi",
       })
-      .select("id, name, description, budget, status, created_at")
+      .select("id, project_code, name, description, budget, status, created_at")
       .single();
 
     if (projectInsertError) {
@@ -164,7 +136,7 @@ export const createProject: ToolDefinition<
       },
       project: {
         id: project.id,
-        code: projectCode,
+        code: project.project_code,
         name: project.name,
         customer: customer.name,
         budget:

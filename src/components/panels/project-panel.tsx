@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { extractProjectCodeFromLabel } from "@/lib/drive/drive-files";
 import { createClient } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -123,7 +122,7 @@ export function ProjectPanel({ projectId }: ProjectPanelProps) {
         ] = await Promise.all([
           supabase
             .from("projects")
-            .select("id, name, budget, currency, status, description, updated_at")
+            .select("id, project_code, name, budget, currency, status, description, updated_at")
             .eq("id", projectId)
             .single(),
           supabase
@@ -200,7 +199,7 @@ export function ProjectPanel({ projectId }: ProjectPanelProps) {
               description: project.description,
               updatedAt: project.updated_at,
             },
-            code: extractProjectCodeFromLabel(rootFolder?.revision_label) ?? null,
+            code: project.project_code,
             customer: (rootFolder?.discipline as string | null | undefined) ?? null,
             documents: (documents ?? []).map((document) => ({
               id: document.id,
