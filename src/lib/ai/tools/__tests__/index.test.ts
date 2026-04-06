@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
+  calculateProposal,
+  createProposal,
   defineTool,
   createProject,
   createDriveFolder,
@@ -7,8 +9,10 @@ import {
   getDashboard,
   importBOQ,
   importPriceList,
+  linkFileToProposal,
   searchDocuments,
   searchPrices,
+  submitProposal,
   suggestPrices,
   uploadDocument,
   getTools,
@@ -33,6 +37,12 @@ describe("tool registry exports", () => {
   it("should export createProject", () => {
     expect(createProject).toBeDefined();
     expect(createProject.name).toBe("createProject");
+  });
+
+  it("should export createProposal", () => {
+    expect(createProposal).toBeDefined();
+    expect(createProposal.name).toBe("createProposal");
+    expect(createProposal.needsApproval).toBe(true);
   });
 
   it("should export getDashboard", () => {
@@ -82,6 +92,23 @@ describe("tool registry exports", () => {
     expect(uploadDocument.name).toBe("uploadDocument");
   });
 
+  it("should export calculateProposal", () => {
+    expect(calculateProposal).toBeDefined();
+    expect(calculateProposal.name).toBe("calculateProposal");
+    expect(calculateProposal.needsApproval).toBe(false);
+  });
+
+  it("should export submitProposal", () => {
+    expect(submitProposal).toBeDefined();
+    expect(submitProposal.name).toBe("submitProposal");
+    expect(submitProposal.needsApproval).toBe(true);
+  });
+
+  it("should export linkFileToProposal", () => {
+    expect(linkFileToProposal).toBeDefined();
+    expect(linkFileToProposal.name).toBe("linkFileToProposal");
+  });
+
   it("should build AI SDK tools from the shared registry", () => {
     const tools = getTools({
       supabase: {} as never,
@@ -89,15 +116,19 @@ describe("tool registry exports", () => {
       userId: "user-1",
     });
 
+    expect(tools.createProposal).toBeDefined();
     expect(tools.createProject).toBeDefined();
     expect(tools.createDriveFolder).toBeDefined();
+    expect(tools.calculateProposal).toBeDefined();
     expect(tools.getDashboard).toBeDefined();
     expect(tools.importBOQ).toBeDefined();
     expect(tools.generateBOQFromDocs).toBeDefined();
     expect(tools.searchPrices).toBeDefined();
     expect(tools.suggestPrices).toBeDefined();
     expect(tools.importPriceList).toBeDefined();
+    expect(tools.linkFileToProposal).toBeDefined();
     expect(tools.searchDocuments).toBeDefined();
+    expect(tools.submitProposal).toBeDefined();
     expect(tools.uploadDocument).toBeDefined();
   });
 });

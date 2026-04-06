@@ -11,6 +11,7 @@ import { ChatSidebar } from "@/components/chat/chat-sidebar";
 import { ChatMessages } from "@/components/chat/chat-messages";
 import { ChatInput } from "@/components/chat/chat-input";
 import { SidePanel } from "@/components/panels/side-panel";
+import { ProposalSummary } from "@/components/proposals/proposal-summary";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
@@ -287,19 +288,7 @@ export function ChatPageClient({
     </div>
   );
 
-  const teklifPanel = (
-    <div className="p-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Teklif Özeti</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>Teklif paneli placeholder içerik gösteriyor.</p>
-          <p>P5a merge sonrası teklif API sonuçları burada bağlanacak.</p>
-        </CardContent>
-      </Card>
-    </div>
-  );
+  const teklifPanel = <ProposalSummary />;
 
   const projectInfoPanel = (
     <div className="p-4">
