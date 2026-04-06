@@ -289,8 +289,8 @@ export function ChatPageClient({
 
   const boqPanel = (
     <div className="space-y-4 p-4">
-      <BoqImportWizard />
-      <PriceSuggestionPanel />
+      <BoqImportWizard projectId={selectedProjectId} />
+      <PriceSuggestionPanel projectId={selectedProjectId} />
       <BoqTable />
     </div>
   );
