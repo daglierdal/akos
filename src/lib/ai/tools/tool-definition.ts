@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 export interface ToolContext {
-  supabase: Pick<SupabaseClient, "from" | "rpc">;
+  supabase: SupabaseClient;
   tenantId: string;
   userId: string;
 }

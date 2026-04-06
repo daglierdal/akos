@@ -4,11 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { PanelRight } from "lucide-react";
 import { DefaultChatTransport, type UIMessage } from "ai";
+import { BoqImportWizard } from "@/components/boq/boq-import-wizard";
+import { BoqTable } from "@/components/boq/boq-table";
+import { PriceSuggestionPanel } from "@/components/boq/price-suggestion-panel";
 import { ChatSidebar } from "@/components/chat/chat-sidebar";
 import { ChatMessages } from "@/components/chat/chat-messages";
 import { ChatInput } from "@/components/chat/chat-input";
-import { ResultPanel } from "@/components/chat/result-panel";
+import { SidePanel } from "@/components/panels/side-panel";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
 import {
   getChatMessages,
@@ -241,6 +245,77 @@ export function ChatPageClient({
     sessions.find((session) => session.id === activeSessionId)?.title ??
     "Yeni Sohbet";
 
+  const mainContent = (
+    <div className="flex flex-1 flex-col">
+      <div className="flex items-center justify-between border-b border-border px-4 py-2">
+        <div className="flex min-w-0 flex-col">
+          <h1 className="truncate text-sm font-medium text-muted-foreground">
+            {activeTitle}
+          </h1>
+          {requestPersistenceWarning || sessionPersistenceWarning ? (
+            <p className="text-xs text-amber-600">
+              Son mesaj kaydedilemedi.
+            </p>
+          ) : null}
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={() => setResultPanelOpen(!resultPanelOpen)}
+          title={resultPanelOpen ? "Paneli Kapat" : "Sonuç Paneli"}
+        >
+          <PanelRight className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <ChatMessages messages={messages} isLoading={isLoading} />
+      <ChatInput
+        input={inputValue}
+        isLoading={isLoading}
+        onInputChange={setInputValue}
+        onSubmit={handleSubmit}
+      />
+    </div>
+  );
+
+  const boqPanel = (
+    <div className="space-y-4 p-4">
+      <BoqImportWizard />
+      <PriceSuggestionPanel />
+      <BoqTable />
+    </div>
+  );
+
+  const teklifPanel = (
+    <div className="p-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Teklif Özeti</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          <p>Teklif paneli placeholder içerik gösteriyor.</p>
+          <p>P5a merge sonrası teklif API sonuçları burada bağlanacak.</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const projectInfoPanel = (
+    <div className="p-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Proje Bilgisi</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          <p>Aktif proje: Levent Ofis Kampüsü</p>
+          <p>Durum: Ön maliyet çalışması</p>
+          <p>Son güncelleme: Bugün 14:30</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
       <ChatSidebar
@@ -249,43 +324,16 @@ export function ChatPageClient({
         onSelectSession={handleSelectSession}
         onNewSession={handleNewSession}
       />
-
-      <div className="flex flex-1 flex-col">
-        <div className="flex items-center justify-between border-b border-border px-4 py-2">
-          <div className="flex min-w-0 flex-col">
-            <h1 className="truncate text-sm font-medium text-muted-foreground">
-              {activeTitle}
-            </h1>
-            {requestPersistenceWarning || sessionPersistenceWarning ? (
-              <p className="text-xs text-amber-600">
-                Son mesaj kaydedilemedi.
-              </p>
-            ) : null}
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setResultPanelOpen(!resultPanelOpen)}
-            title={resultPanelOpen ? "Paneli Kapat" : "Sonuç Paneli"}
-          >
-            <PanelRight className="h-4 w-4" />
-          </Button>
-        </div>
-
-        <ChatMessages messages={messages} isLoading={isLoading} />
-        <ChatInput
-          input={inputValue}
-          isLoading={isLoading}
-          onInputChange={setInputValue}
-          onSubmit={handleSubmit}
+      <div className="min-w-0 flex-1">
+        <SidePanel
+          main={mainContent}
+          open={resultPanelOpen}
+          onOpenChange={setResultPanelOpen}
+          boq={boqPanel}
+          proposal={teklifPanel}
+          projectInfo={projectInfoPanel}
         />
       </div>
-
-      <ResultPanel
-        isOpen={resultPanelOpen}
-        onClose={() => setResultPanelOpen(false)}
-      />
     </div>
   );
 }
