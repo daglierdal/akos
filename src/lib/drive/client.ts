@@ -2,7 +2,7 @@ import type { drive_v3 } from "googleapis";
 import { google } from "googleapis";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
-import { decryptSecret, getOAuth2Client } from "./auth";
+import { GOOGLE_DRIVE_PROVIDER, decryptSecret, getOAuth2Client } from "./auth";
 
 type DbClient = Pick<SupabaseClient<Database>, "from">;
 
@@ -27,7 +27,7 @@ export async function getDriveClient(supabase: DbClient, tenantId: string) {
       "access_token_encrypted, refresh_token_encrypted, expires_at, scope, token_type"
     )
     .eq("tenant_id", tenantId)
-    .eq("provider", "google_drive")
+    .eq("provider", GOOGLE_DRIVE_PROVIDER)
     .maybeSingle() as { data: Record<string, any> | null; error: any };
 
   if (error) {

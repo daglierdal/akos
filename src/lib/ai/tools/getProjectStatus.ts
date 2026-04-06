@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { assertPermission, canViewAllProjects } from "@/lib/auth/permissions";
+import { extractProjectCodeFromLabel } from "@/lib/drive/drive-files";
 import { defineTool, type ToolContext } from "./tool-definition";
 
 const parameters = z.object({
@@ -7,10 +8,8 @@ const parameters = z.object({
 });
 
 interface ProjectRootFolder {
-  project_code?: string | null;
-  metadata?: {
-    customerName?: string | null;
-  } | null;
+  discipline?: string | null;
+  revision_label?: string | null;
 }
 
 export const getProjectStatus = defineTool({
@@ -65,10 +64,10 @@ export const getProjectStatus = defineTool({
 
     const { data: rootFolder, error: rootFolderError } = await (context.supabase as any)
       .from("drive_files")
-      .select("project_code, metadata")
-      .eq("is_folder", true)
-      .eq("project_name", project.name)
-      .is("parent_external_file_id", null)
+      .select("discipline, revision_label")
+      .eq("project_id", project.id)
+      .eq("file_role", "folder")
+      .is("drive_parent_id", null)
       .maybeSingle();
 
     if (rootFolderError) {
@@ -105,8 +104,8 @@ export const getProjectStatus = defineTool({
         status: project.status,
         budget: project.budget === null ? null : Number(project.budget),
         currency: project.currency,
-        code: typedRootFolder?.project_code ?? null,
-        customer: typedRootFolder?.metadata?.customerName ?? null,
+        code: extractProjectCodeFromLabel(typedRootFolder?.revision_label) ?? null,
+        customer: typedRootFolder?.discipline ?? null,
         createdAt: project.created_at,
         updatedAt: project.updated_at,
       },

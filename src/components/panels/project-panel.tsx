@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { extractProjectCodeFromLabel } from "@/lib/drive/drive-files";
 import { createClient } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -152,17 +153,16 @@ export function ProjectPanel({ projectId }: ProjectPanelProps) {
 
         const { data: rootFolder, error: rootError } = await (supabase as any)
           .from("drive_files")
-          .select("project_code, metadata")
-          .eq("project_name", project.name)
-          .eq("is_folder", true)
-          .is("parent_external_file_id", null)
+          .select("discipline, revision_label")
+          .eq("project_id", project.id)
+          .eq("file_role", "folder")
+          .is("drive_parent_id", null)
           .maybeSingle();
 
         if (rootError) {
           throw new Error(rootError.message);
         }
 
-        const rootMetadata = (rootFolder?.metadata ?? null) as Record<string, unknown> | null;
         const activities = [
           {
             id: project.id,
@@ -200,8 +200,8 @@ export function ProjectPanel({ projectId }: ProjectPanelProps) {
               description: project.description,
               updatedAt: project.updated_at,
             },
-            code: (rootFolder?.project_code as string | null | undefined) ?? null,
-            customer: (rootMetadata?.customerName as string | null | undefined) ?? null,
+            code: extractProjectCodeFromLabel(rootFolder?.revision_label) ?? null,
+            customer: (rootFolder?.discipline as string | null | undefined) ?? null,
             documents: (documents ?? []).map((document) => ({
               id: document.id,
               title: document.title,

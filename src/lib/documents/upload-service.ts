@@ -2,6 +2,7 @@ import { Readable } from "node:stream";
 import type { drive_v3 } from "googleapis";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createFolder, uploadFile } from "@/lib/drive/client";
+import { extractProjectCodeFromLabel } from "@/lib/drive/drive-files";
 import type { Database } from "@/lib/supabase/database.types";
 import {
   resolveDriveRouting,
@@ -119,17 +120,17 @@ interface ProjectContext {
 interface DriveFolderRecord {
   id?: string;
   tenant_id: string;
-  provider: "google_drive";
-  external_file_id: string;
-  parent_external_file_id: string | null;
-  project_code: string | null;
-  project_name: string | null;
-  name: string;
-  path: string;
-  mime_type: string;
+  project_id: string | null;
+  proposal_id: string | null;
+  file_role: string | null;
+  document_type: string | null;
+  discipline: string | null;
+  revision_label: string | null;
+  drive_file_id: string;
+  drive_parent_id: string | null;
+  mime_type: string | null;
   web_view_link: string | null;
-  is_folder: boolean;
-  metadata: JsonObject;
+  size_bytes: number | null;
 }
 
 interface DocumentRecord {
@@ -242,23 +243,23 @@ async function getProjectContext(
       [
         "id",
         "tenant_id",
-        "provider",
-        "external_file_id",
-        "parent_external_file_id",
-        "project_code",
-        "project_name",
-        "name",
-        "path",
+        "project_id",
+        "proposal_id",
+        "file_role",
+        "document_type",
+        "discipline",
+        "revision_label",
+        "drive_file_id",
+        "drive_parent_id",
         "mime_type",
         "web_view_link",
-        "is_folder",
-        "metadata",
+        "size_bytes",
       ].join(",")
     )
     .eq("tenant_id", tenantId)
-    .eq("is_folder", true)
-    .eq("project_name", project.name)
-    .is("parent_external_file_id", null)
+    .eq("project_id", project.id)
+    .eq("file_role", "folder")
+    .is("drive_parent_id", null)
     .maybeSingle();
 
   const { data: rootFolder } = (await driveQuery) as {
@@ -271,7 +272,8 @@ async function getProjectContext(
     tenantId,
     tenantPrefix: tenant.project_code_prefix,
     projectCode:
-      rootFolder?.project_code ?? buildProjectCode(project.name, tenant.project_code_prefix),
+      extractProjectCodeFromLabel(rootFolder?.revision_label) ??
+      buildProjectCode(project.name, tenant.project_code_prefix),
     rootFolder,
   };
 }
@@ -411,17 +413,17 @@ async function ensureDrivePath(
 
     rootFolder = {
       tenant_id: context.tenantId,
-      provider: "google_drive",
-      external_file_id: created.id,
-      parent_external_file_id: null,
-      project_code: context.projectCode,
-      project_name: context.project.name,
-      name: created.name ?? rootName,
-      path: rootName,
+      project_id: context.project.id,
+      proposal_id: null,
+      file_role: "folder",
+      document_type: "project_root",
+      discipline: null,
+      revision_label: rootName,
+      drive_file_id: created.id,
+      drive_parent_id: null,
       mime_type: created.mimeType ?? "application/vnd.google-apps.folder",
       web_view_link: created.webViewLink ?? null,
-      is_folder: true,
-      metadata: { path: rootName },
+      size_bytes: null,
     };
 
     const { error } = await (supabase as any).from("drive_files").insert(rootFolder);
@@ -432,8 +434,8 @@ async function ensureDrivePath(
     context.rootFolder = rootFolder;
   }
 
-  let parentId = rootFolder.external_file_id;
-  let currentPath = rootFolder.path;
+  let parentId = rootFolder.drive_file_id;
+  let currentPath = rootFolder.revision_label ?? "";
 
   for (const segment of pathSegments) {
     currentPath = `${currentPath}/${segment}`;
@@ -441,32 +443,33 @@ async function ensureDrivePath(
     const { data: existing } = (await (supabase as any)
       .from("drive_files")
       .select(
-        "id, tenant_id, provider, external_file_id, parent_external_file_id, project_code, project_name, name, path, mime_type, web_view_link, is_folder, metadata"
+        "id, tenant_id, project_id, proposal_id, file_role, document_type, discipline, revision_label, drive_file_id, drive_parent_id, mime_type, web_view_link, size_bytes"
       )
       .eq("tenant_id", context.tenantId)
-      .eq("path", currentPath)
-      .eq("is_folder", true)
+      .eq("project_id", context.project.id)
+      .eq("file_role", "folder")
+      .eq("revision_label", currentPath)
       .maybeSingle()) as { data: DriveFolderRecord | null };
 
     if (existing) {
-      parentId = existing.external_file_id;
+      parentId = existing.drive_file_id;
       continue;
     }
 
     const created = await createFolder(driveClient, segment, parentId);
     const payload: DriveFolderRecord = {
       tenant_id: context.tenantId,
-      provider: "google_drive",
-      external_file_id: created.id,
-      parent_external_file_id: parentId,
-      project_code: context.projectCode,
-      project_name: context.project.name,
-      name: created.name ?? segment,
-      path: currentPath,
+      project_id: context.project.id,
+      proposal_id: null,
+      file_role: "folder",
+      document_type: "folder",
+      discipline: null,
+      revision_label: currentPath,
+      drive_file_id: created.id,
+      drive_parent_id: parentId,
       mime_type: created.mimeType ?? "application/vnd.google-apps.folder",
       web_view_link: created.webViewLink ?? null,
-      is_folder: true,
-      metadata: { path: currentPath },
+      size_bytes: null,
     };
 
     const { error } = await (supabase as any).from("drive_files").insert(payload);
@@ -479,7 +482,7 @@ async function ensureDrivePath(
 
   return {
     parentId,
-    rootPath: rootFolder.path,
+    rootPath: rootFolder.revision_label ?? "",
   };
 }
 
@@ -550,21 +553,17 @@ async function storeInDrive(
 
   const fileRecord = {
     tenant_id: context.tenantId,
-    provider: "google_drive" as const,
-    external_file_id: uploaded.id,
-    parent_external_file_id: ensuredPath.parentId,
-    project_code: context.projectCode,
-    project_name: context.project.name,
-    name: standardFilename,
-    path: `${ensuredPath.rootPath}/${route.path}/${standardFilename}`,
+    project_id: context.project.id,
+    proposal_id: null,
+    file_role: "file" as const,
+    document_type: categoryResult.category,
+    discipline: null,
+    revision_label: revisionLabel,
+    drive_file_id: uploaded.id,
+    drive_parent_id: ensuredPath.parentId,
     mime_type: uploaded.mimeType ?? file.type ?? "application/octet-stream",
     web_view_link: uploaded.webViewLink ?? null,
-    is_folder: false,
-    metadata: {
-      category: categoryResult.category,
-      originalFilename: file.name,
-      routePath: route.path,
-    },
+    size_bytes: file.size,
   };
 
   const { error } = await (supabase as any).from("drive_files").insert(fileRecord);

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { assertPermission, canViewAllProjects } from "@/lib/auth/permissions";
+import { extractProjectCodeFromLabel } from "@/lib/drive/drive-files";
 import { defineTool, type ToolContext } from "./tool-definition";
 
 const parameters = z.object({
@@ -10,11 +11,9 @@ const parameters = z.object({
 });
 
 interface DriveRootFolder {
-  project_code?: string | null;
-  project_name?: string | null;
-  metadata?: {
-    customerName?: string | null;
-  } | null;
+  project_id?: string | null;
+  discipline?: string | null;
+  revision_label?: string | null;
 }
 
 export const searchProjects = defineTool({
@@ -51,9 +50,9 @@ export const searchProjects = defineTool({
         query,
         (context.supabase as any)
           .from("drive_files")
-          .select("project_code, project_name, metadata")
-          .eq("is_folder", true)
-          .is("parent_external_file_id", null),
+          .select("project_id, discipline, revision_label")
+          .eq("file_role", "folder")
+          .is("drive_parent_id", null),
       ]);
 
     const firstError = projectError ?? driveError;
@@ -61,10 +60,10 @@ export const searchProjects = defineTool({
       throw new Error(`Project search failed: ${firstError.message}`);
     }
 
-    const rootByProjectName = new Map<string, DriveRootFolder>();
+    const rootByProjectId = new Map<string, DriveRootFolder>();
     for (const row of ((driveRoots ?? []) as DriveRootFolder[])) {
-      if (row.project_name) {
-        rootByProjectName.set(row.project_name, row);
+      if (row.project_id) {
+        rootByProjectId.set(row.project_id, row);
       }
     }
 
@@ -72,9 +71,9 @@ export const searchProjects = defineTool({
 
     const results = (projects ?? [])
       .map((project) => {
-        const driveRoot = rootByProjectName.get(project.name);
-        const customerName = driveRoot?.metadata?.customerName ?? null;
-        const code = driveRoot?.project_code ?? null;
+        const driveRoot = rootByProjectId.get(project.id);
+        const customerName = driveRoot?.discipline ?? null;
+        const code = extractProjectCodeFromLabel(driveRoot?.revision_label) ?? null;
 
         return {
           id: project.id,
