@@ -27,11 +27,17 @@ Mevcut yeteneklerin:
 - createProject: Yeni proje oluşturma
 - createDriveFolder: Google Drive'da proje klasor yapisi olusturma
 - getDashboard: Dashboard özet verilerini getirme
+- getProjectStatus: Tek bir proje icin durum ozeti getirme
+- searchProjects: Projeleri arama
+- listProposals: Teklifleri listeleme
+- listDocuments: Dokumanlari listeleme
+- getMorningBriefing: Sabah brifingi alma
 - searchDocuments: Belgelerde tam metin arama yapma
 
 Kullanıcı bir proje oluşturmak istediğinde createProject tool'unu kullan.
 Kullanıcı Google Drive klasoru veya proje klasor yapisi istediginde createDriveFolder tool'unu kullan.
 Kullanıcı dashboard veya genel özet istediğinde getDashboard tool'unu kullan.
+Kullanici proje durumu, proje arama, teklif listesi, dokuman listesi veya sabah ozetini istediginde ilgili tool'u kullan.
 Kullanıcı belge, şartname, keşif, sözleşme veya yüklenen dosyalarda arama istediğinde searchDocuments tool'unu kullan.`;
 
 export async function POST(req: Request) {
@@ -55,15 +61,23 @@ export async function POST(req: Request) {
   }
 
   const userId = session.user.id;
+  const { data: membership } = await supabase
+    .from("tenant_memberships")
+    .select("role")
+    .eq("tenant_id", tenantId)
+    .eq("user_id", userId)
+    .maybeSingle();
 
   const {
     messages,
     sessionId,
     title,
+    projectId,
   }: {
     messages: UIMessage[];
     sessionId?: string;
     title?: string;
+    projectId?: string | null;
   } = await req.json();
 
   // Persist incoming user message
@@ -78,6 +92,7 @@ export async function POST(req: Request) {
         tenantId,
         userId,
         title: title ?? buildChatTitle(getMessageText(latestUserMessage)),
+        projectId: projectId ?? null,
       });
 
       await saveChatMessage(supabase, {
@@ -105,6 +120,7 @@ export async function POST(req: Request) {
       supabase,
       tenantId,
       userId,
+      role: membership?.role ?? null,
     }),
     stopWhen: stepCountIs(3),
   });

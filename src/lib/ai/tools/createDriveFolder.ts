@@ -1,7 +1,6 @@
 import { z } from "zod";
 import type { drive_v3 } from "googleapis";
 import { createFolder, getDriveClient } from "@/lib/drive/client";
-import type { Database } from "@/lib/supabase/database.types";
 import type { ToolContext, ToolDefinition } from "./index";
 
 const GOOGLE_DRIVE_FOLDER_MIME = "application/vnd.google-apps.folder";
@@ -9,6 +8,8 @@ const GOOGLE_DRIVE_FOLDER_MIME = "application/vnd.google-apps.folder";
 const parameters = z.object({
   projectCode: z.string().min(1).describe("Proje kodu"),
   projectName: z.string().min(1).describe("Proje adi"),
+  projectId: z.string().uuid().optional().describe("Opsiyonel proje ID"),
+  customerName: z.string().optional().describe("Musteri adi"),
 });
 
 type FolderNode = {
@@ -75,12 +76,25 @@ export interface CreateDriveFolderResult {
   createdFolderCount: number;
 }
 
-type DriveFileInsert = Database["public"]["Tables"]["drive_files"]["Insert"];
+interface DriveFileInsert {
+  tenant_id: string;
+  provider: "google_drive";
+  external_file_id: string;
+  parent_external_file_id: string | null;
+  project_code: string;
+  project_name: string;
+  name: string;
+  path: string;
+  mime_type: string;
+  web_view_link: string | null;
+  is_folder: boolean;
+  metadata: Record<string, unknown>;
+}
 
 async function createFolderTree(
   drive: drive_v3.Drive,
-  context: ToolContext,
-  projectCode: string,
+  tenantId: string,
+  metadata: Record<string, unknown>,
   projectName: string,
   nodes: FolderNode[],
   parentId: string,
@@ -92,25 +106,28 @@ async function createFolderTree(
     const path = `${pathPrefix}/${node.name}`;
 
     records.push({
-      tenant_id: context.tenantId,
-      project_id: null,
-      proposal_id: null,
-      file_role: "folder",
-      document_type: projectName,
-      discipline: null,
-      revision_label: path,
-      drive_file_id: folder.id,
-      drive_parent_id: parentId,
+      tenant_id: tenantId,
+      provider: "google_drive",
+      external_file_id: folder.id,
+      parent_external_file_id: parentId,
+      project_code: String(metadata.projectCode ?? ""),
+      project_name: projectName,
+      name: folder.name ?? node.name,
+      path,
       mime_type: folder.mimeType ?? GOOGLE_DRIVE_FOLDER_MIME,
       web_view_link: folder.webViewLink ?? null,
-      size_bytes: null,
+      is_folder: true,
+      metadata: {
+        ...metadata,
+        path,
+      },
     });
 
     if (node.children?.length) {
       await createFolderTree(
         drive,
-        context,
-        projectCode,
+        tenantId,
+        metadata,
         projectName,
         node.children,
         folder.id,
@@ -138,28 +155,37 @@ export const createDriveFolder: ToolDefinition<
     const rootFolderName = `${projectCode}_${projectName}`;
     const drive = await getDriveClient(context.supabase, context.tenantId);
     const rootFolder = await createFolder(drive, rootFolderName);
+    const baseMetadata = {
+      customerName: params.customerName?.trim() || null,
+      projectCode,
+      projectId: params.projectId ?? null,
+      projectName,
+    };
 
     const records: DriveFileInsert[] = [
       {
         tenant_id: context.tenantId,
-        project_id: null,
-        proposal_id: null,
-        file_role: "folder",
-        document_type: projectName,
-        discipline: null,
-        revision_label: rootFolderName,
-        drive_file_id: rootFolder.id,
-        drive_parent_id: null,
+        provider: "google_drive",
+        external_file_id: rootFolder.id,
+        parent_external_file_id: null,
+        project_code: projectCode,
+        project_name: projectName,
+        name: rootFolder.name ?? rootFolderName,
+        path: rootFolderName,
         mime_type: rootFolder.mimeType ?? GOOGLE_DRIVE_FOLDER_MIME,
         web_view_link: rootFolder.webViewLink ?? null,
-        size_bytes: null,
+        is_folder: true,
+        metadata: {
+          ...baseMetadata,
+          path: rootFolderName,
+        },
       },
     ];
 
     await createFolderTree(
       drive,
-      context,
-      projectCode,
+      context.tenantId,
+      baseMetadata,
       projectName,
       folderTree,
       rootFolder.id,
@@ -167,7 +193,7 @@ export const createDriveFolder: ToolDefinition<
       records
     );
 
-    const { error } = await context.supabase.from("drive_files").insert(records);
+    const { error } = await (context.supabase as any).from("drive_files").insert(records);
 
     if (error) {
       throw new Error(`Drive folder records could not be saved: ${error.message}`);

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { assertPermission, canSubmitProposal } from "@/lib/auth/permissions";
 import { getDriveClient } from "@/lib/drive/client";
 import {
   generateProposalPDF,
@@ -27,6 +28,11 @@ export const submitProposal: ToolDefinition<
   needsApproval: true,
   parameters,
   execute: async (params, context) => {
+    assertPermission(
+      canSubmitProposal(context.role),
+      "Teklif gonderme yetkiniz yok.",
+    );
+
     const driveClient = await getDriveClient(context.supabase, context.tenantId);
     const pdfBuffer = await generateProposalPDF(context.supabase, params.proposalId);
     const uploaded = await uploadProposalPDF(

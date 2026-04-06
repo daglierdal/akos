@@ -33,6 +33,7 @@ describe("chat-store", () => {
         tenant_id: "tenant-1",
         user_id: "user-1",
         title: "Merhaba",
+        project_id: null,
       },
       { onConflict: "id" },
     );
@@ -98,6 +99,7 @@ describe("chat-store", () => {
     const sessionsQuery = {
       select: vi.fn(() => sessionsQuery),
       eq: vi.fn(() => sessionsQuery),
+      is: vi.fn(() => sessionsQuery),
       order: vi.fn(() => sessionsQuery),
       limit,
     };
@@ -126,10 +128,63 @@ describe("chat-store", () => {
       }),
     } as any;
 
-    const result = await getChatSessions(supabase);
+    const result = await getChatSessions(supabase, null);
 
     expect(result).toEqual([{ id: "session-1", title: "Baslik" }]);
     expect(sessionsQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
+    expect(sessionsQuery.is).toHaveBeenCalledWith("project_id", null);
+  });
+
+  it("returns the current project's latest sessions", async () => {
+    const maybeSingle = vi.fn().mockResolvedValue({
+      data: { id: "user-1" },
+      error: null,
+    });
+    const usersQuery = {
+      select: vi.fn(() => usersQuery),
+      eq: vi.fn(() => usersQuery),
+      maybeSingle,
+    };
+    const limit = vi.fn().mockResolvedValue({
+      data: [{ id: "session-2", title: "Proje Baslik" }],
+      error: null,
+    });
+    const sessionsQuery = {
+      select: vi.fn(() => sessionsQuery),
+      eq: vi.fn(() => sessionsQuery),
+      is: vi.fn(() => sessionsQuery),
+      order: vi.fn(() => sessionsQuery),
+      limit,
+    };
+    const supabase = {
+      auth: {
+        getUser: vi.fn().mockResolvedValue({
+          data: {
+            user: {
+              email: "test@example.com",
+              app_metadata: { tenant_id: "tenant-1" },
+            },
+          },
+          error: null,
+        }),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "users") {
+          return usersQuery;
+        }
+
+        if (table === "chat_sessions") {
+          return sessionsQuery;
+        }
+
+        throw new Error(`Unexpected table: ${table}`);
+      }),
+    } as any;
+
+    const result = await getChatSessions(supabase, "project-1");
+
+    expect(result).toEqual([{ id: "session-2", title: "Proje Baslik" }]);
+    expect(sessionsQuery.eq).toHaveBeenCalledWith("project_id", "project-1");
   });
 
   it("updates the chat session persist error timestamp", async () => {

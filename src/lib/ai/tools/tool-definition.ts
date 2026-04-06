@@ -6,6 +6,7 @@ export interface ToolContext {
   supabase: SupabaseClient<Database>;
   tenantId: string;
   userId: string;
+  role?: string | null;
 }
 
 export interface ToolDefinition<TParams extends z.ZodType, TResult> {

@@ -11,6 +11,7 @@ interface SaveChatSessionInput {
   tenantId: string;
   userId: string;
   title?: string | null;
+  projectId?: string | null;
 }
 
 interface SaveChatMessageInput {
@@ -61,13 +62,14 @@ async function resolveCurrentUserId(supabase: DbClient) {
 
 export async function saveChatSession(
   supabase: DbClient,
-  { id, tenantId, userId, title }: SaveChatSessionInput,
+  { id, tenantId, userId, title, projectId }: SaveChatSessionInput,
 ) {
   const payload: Database["public"]["Tables"]["chat_sessions"]["Insert"] = {
     id,
     tenant_id: tenantId,
     user_id: userId,
     title: title ?? null,
+    project_id: projectId ?? null,
   };
 
   const { data, error } = await supabase
@@ -134,21 +136,32 @@ export async function setChatSessionPersistError(
   }
 }
 
-export async function getChatSessions(supabase: DbClient) {
+export async function getChatSessions(
+  supabase: DbClient,
+  projectId: string | null = null,
+) {
   const userId = await resolveCurrentUserId(supabase);
 
   if (!userId) {
     return [];
   }
 
-  const { data, error } = await supabase
+  const baseQuery = supabase
     .from("chat_sessions")
     .select(
       "id, title, created_at, updated_at, user_id, tenant_id, project_id, persist_error_at",
     )
-    .eq("user_id", userId)
-    .order("updated_at", { ascending: false })
-    .limit(50);
+    .eq("user_id", userId);
+
+  const { data, error } = projectId
+    ? await baseQuery
+        .eq("project_id", projectId)
+        .order("updated_at", { ascending: false })
+        .limit(50)
+    : await baseQuery
+        .is("project_id", null)
+        .order("updated_at", { ascending: false })
+        .limit(50);
 
   if (error) {
     throw error;

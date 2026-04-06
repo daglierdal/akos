@@ -7,10 +7,15 @@ import { createProject } from "./createProject";
 import { createDriveFolder } from "./createDriveFolder";
 import { generateBOQFromDocs } from "./generateBOQFromDocs";
 import { getDashboard } from "./getDashboard";
+import { getMorningBriefing } from "./getMorningBriefing";
+import { getProjectStatus } from "./getProjectStatus";
 import { importBOQ } from "./importBOQ";
 import { importPriceList } from "./importPriceList";
+import { listDocuments } from "./listDocuments";
+import { listProposals } from "./listProposals";
 import { linkFileToProposal } from "./linkFileToProposal";
 import { searchDocuments } from "./searchDocuments";
+import { searchProjects } from "./searchProjects";
 import { searchPrices } from "./searchPrices";
 import { submitProposal } from "./submitProposal";
 import { suggestPrices } from "./suggestPrices";
@@ -28,13 +33,18 @@ const registry = [
   createDriveFolder,
   calculateProposal,
   getDashboard,
+  getMorningBriefing,
+  getProjectStatus,
   importBOQ,
   generateBOQFromDocs,
+  listDocuments,
+  listProposals,
   suggestPrices,
   searchPrices,
   importPriceList,
   linkFileToProposal,
   searchDocuments,
+  searchProjects,
   submitProposal,
   uploadDocument,
 ] as const;
@@ -60,10 +70,15 @@ export {
   createDriveFolder,
   generateBOQFromDocs,
   getDashboard,
+  getMorningBriefing,
+  getProjectStatus,
   importBOQ,
   importPriceList,
+  listDocuments,
+  listProposals,
   linkFileToProposal,
   searchDocuments,
+  searchProjects,
   searchPrices,
   submitProposal,
   suggestPrices,

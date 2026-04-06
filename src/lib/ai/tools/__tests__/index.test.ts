@@ -7,10 +7,15 @@ import {
   createDriveFolder,
   generateBOQFromDocs,
   getDashboard,
+  getMorningBriefing,
+  getProjectStatus,
   importBOQ,
   importPriceList,
+  listDocuments,
+  listProposals,
   linkFileToProposal,
   searchDocuments,
+  searchProjects,
   searchPrices,
   submitProposal,
   suggestPrices,
@@ -48,6 +53,19 @@ describe("tool registry exports", () => {
   it("should export getDashboard", () => {
     expect(getDashboard).toBeDefined();
     expect(getDashboard.name).toBe("getDashboard");
+  });
+
+  it("should export the project insight tools", () => {
+    expect(getProjectStatus).toBeDefined();
+    expect(getProjectStatus.name).toBe("getProjectStatus");
+    expect(searchProjects).toBeDefined();
+    expect(searchProjects.name).toBe("searchProjects");
+    expect(listProposals).toBeDefined();
+    expect(listProposals.name).toBe("listProposals");
+    expect(listDocuments).toBeDefined();
+    expect(listDocuments.name).toBe("listDocuments");
+    expect(getMorningBriefing).toBeDefined();
+    expect(getMorningBriefing.name).toBe("getMorningBriefing");
   });
 
   it("should export createDriveFolder", () => {
@@ -121,8 +139,13 @@ describe("tool registry exports", () => {
     expect(tools.createDriveFolder).toBeDefined();
     expect(tools.calculateProposal).toBeDefined();
     expect(tools.getDashboard).toBeDefined();
+    expect(tools.getMorningBriefing).toBeDefined();
+    expect(tools.getProjectStatus).toBeDefined();
     expect(tools.importBOQ).toBeDefined();
+    expect(tools.listDocuments).toBeDefined();
+    expect(tools.listProposals).toBeDefined();
     expect(tools.generateBOQFromDocs).toBeDefined();
+    expect(tools.searchProjects).toBeDefined();
     expect(tools.searchPrices).toBeDefined();
     expect(tools.suggestPrices).toBeDefined();
     expect(tools.importPriceList).toBeDefined();

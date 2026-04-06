@@ -9,6 +9,7 @@ import type { ChatSessionListItem } from "@/lib/chat/chat-ui";
 interface ChatSidebarProps {
   sessions: ChatSessionListItem[];
   activeSessionId: string | null;
+  contextLabel?: string;
   onSelectSession: (id: string) => void;
   onNewSession: () => void;
 }
@@ -16,6 +17,7 @@ interface ChatSidebarProps {
 export function ChatSidebar({
   sessions,
   activeSessionId,
+  contextLabel,
   onSelectSession,
   onNewSession,
 }: ChatSidebarProps) {
@@ -25,6 +27,11 @@ export function ChatSidebar({
         <h2 className="text-sm font-semibold text-sidebar-foreground">
           Sohbetler
         </h2>
+        {contextLabel ? (
+          <span className="rounded-full bg-sidebar-accent px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-sidebar-accent-foreground">
+            {contextLabel}
+          </span>
+        ) : null}
         <Button
           variant="ghost"
           size="icon"

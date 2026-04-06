@@ -10,6 +10,7 @@ import { PriceSuggestionPanel } from "@/components/boq/price-suggestion-panel";
 import { ChatSidebar } from "@/components/chat/chat-sidebar";
 import { ChatMessages } from "@/components/chat/chat-messages";
 import { ChatInput } from "@/components/chat/chat-input";
+import { ProjectPanel } from "@/components/panels/project-panel";
 import { SidePanel } from "@/components/panels/side-panel";
 import { ProposalSummary } from "@/components/proposals/proposal-summary";
 import { Button } from "@/components/ui/button";
@@ -32,12 +33,14 @@ interface ChatPageClientProps {
   initialMessages: UIMessage[];
   initialSessionId: string | null;
   initialSessions: ChatSessionListItem[];
+  selectedProjectId: string | null;
 }
 
 export function ChatPageClient({
   initialMessages,
   initialSessionId,
   initialSessions,
+  selectedProjectId,
 }: ChatPageClientProps) {
   const supabaseRef = useRef(createClient());
   const [requestPersistenceWarning, setRequestPersistenceWarning] =
@@ -142,7 +145,10 @@ export function ChatPageClient({
 
   async function refreshSessions() {
     try {
-      const nextSessions = await getChatSessions(supabaseRef.current);
+      const nextSessions = await getChatSessions(
+        supabaseRef.current,
+        selectedProjectId,
+      );
       setSessions(nextSessions.map(toChatSessionListItem));
     } catch (error) {
       console.error("Chat sessions could not be loaded.", error);
@@ -233,6 +239,7 @@ export function ChatPageClient({
         body: {
           sessionId: activeSessionId,
           title,
+          projectId: selectedProjectId,
         },
       },
     );
@@ -290,26 +297,14 @@ export function ChatPageClient({
 
   const teklifPanel = <ProposalSummary />;
 
-  const projectInfoPanel = (
-    <div className="p-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Proje Bilgisi</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>Aktif proje: Levent Ofis Kampüsü</p>
-          <p>Durum: Ön maliyet çalışması</p>
-          <p>Son güncelleme: Bugün 14:30</p>
-        </CardContent>
-      </Card>
-    </div>
-  );
+  const projectInfoPanel = <ProjectPanel projectId={selectedProjectId} />;
 
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
       <ChatSidebar
         sessions={sessions}
         activeSessionId={activeSessionId}
+        contextLabel={selectedProjectId ? "Proje" : "Genel"}
         onSelectSession={handleSelectSession}
         onNewSession={handleNewSession}
       />

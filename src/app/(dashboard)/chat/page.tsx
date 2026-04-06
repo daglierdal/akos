@@ -8,14 +8,22 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import type { UIMessage } from "ai";
 
-export default async function ChatPage() {
+export default async function ChatPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ projectId?: string }>;
+}) {
   const supabase = await createClient();
+  const params = await searchParams;
+  const selectedProjectId = params?.projectId ?? null;
 
   let initialSessions: ChatSessionListItem[] = [];
   let initialMessages: UIMessage[] = [];
 
   try {
-    initialSessions = (await getChatSessions(supabase)).map(toChatSessionListItem);
+    initialSessions = (await getChatSessions(supabase, selectedProjectId)).map(
+      toChatSessionListItem,
+    );
   } catch (error) {
     console.error("Initial chat sessions could not be loaded.", error);
   }
@@ -37,6 +45,7 @@ export default async function ChatPage() {
       initialSessions={initialSessions}
       initialSessionId={initialSessionId}
       initialMessages={initialMessages}
+      selectedProjectId={selectedProjectId}
     />
   );
 }
