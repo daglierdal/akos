@@ -177,7 +177,7 @@ async function loadProposalPdfData(
   const summary = await getProposalSummary(supabase, proposalId);
   const { data: project, error: projectError } = await supabase
     .from("projects")
-    .select("id, name, description, currency")
+    .select("id, name, description, currency, customers(*)")
     .eq("id", summary.proposal.project_id)
     .single();
   const { data: tenant, error: tenantError } = await supabase
@@ -185,12 +185,6 @@ async function loadProposalPdfData(
     .select("id, name, slug")
     .eq("id", summary.proposal.tenant_id)
     .single();
-  const { data: customer } = await supabase
-    .from("customers")
-    .select("id, name, contact_person, email, phone, address")
-    .eq("tenant_id", summary.proposal.tenant_id)
-    .ilike("name", project?.name ?? "")
-    .maybeSingle();
 
   if (projectError || !project) {
     throw new Error(projectError?.message ?? "Project not found.");
@@ -204,7 +198,7 @@ async function loadProposalPdfData(
     summary,
     project,
     tenant,
-    customer,
+    customer: project.customers,
   };
 }
 

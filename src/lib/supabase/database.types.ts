@@ -967,6 +967,7 @@ export interface Database {
         Row: {
           id: string;
           tenant_id: string;
+          customer_id: string | null;
           name: string;
           description: string | null;
           status: string;
@@ -980,6 +981,7 @@ export interface Database {
         Insert: {
           id?: string;
           tenant_id: string;
+          customer_id?: string | null;
           name: string;
           description?: string | null;
           status?: string;
@@ -993,6 +995,7 @@ export interface Database {
         Update: {
           id?: string;
           tenant_id?: string;
+          customer_id?: string | null;
           name?: string;
           description?: string | null;
           status?: string;
@@ -1004,6 +1007,13 @@ export interface Database {
           updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "projects_customer_id_fkey";
+            columns: ["customer_id"];
+            isOneToOne: false;
+            referencedRelation: "customers";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "fk_projects_tenant";
             columns: ["tenant_id"];

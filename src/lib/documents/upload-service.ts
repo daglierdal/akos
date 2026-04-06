@@ -8,6 +8,7 @@ import {
   resolveDriveRouting,
   type DocumentCategory,
 } from "./routing-rules";
+import { processDocument } from "./processing-service";
 
 const SUPABASE_BUCKET = process.env.SUPABASE_DOCUMENTS_BUCKET ?? "documents";
 const SUPABASE_MAX_BYTES = 50 * 1024 * 1024;
@@ -16,6 +17,7 @@ const DROPZONE_MAX_BYTES = 100 * 1024 * 1024;
 const AI_READABLE_EXTENSIONS = new Set(["pdf", "xlsx", "docx", "jpg", "jpeg", "png"]);
 const IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png"]);
 const DRAWING_EXTENSIONS = new Set(["dwg", "dxf"]);
+const PARSEABLE_EXTENSIONS = new Set(["pdf", "xlsx", "docx"]);
 const CLIENT_DOCUMENT_HINTS = [
   "client",
   "musteri",
@@ -707,6 +709,15 @@ export async function uploadDocument(
 
   if (versionInsert.error || !versionInsert.data) {
     throw new Error(versionInsert.error?.message ?? "Document version save failed.");
+  }
+
+  if (stored.storageType === "supabase" && PARSEABLE_EXTENSIONS.has(extension)) {
+    const processingResult = await processDocument(supabase, document.data.id);
+    if (!processingResult.success) {
+      throw new Error(
+        processingResult.error ?? "Document processing failed after upload."
+      );
+    }
   }
 
   return {

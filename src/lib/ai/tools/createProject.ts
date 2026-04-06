@@ -134,6 +134,7 @@ export const createProject: ToolDefinition<
       .insert({
         tenant_id: context.tenantId,
         name: projectName,
+        customer_id: customer.id,
         description: params.description?.trim() || null,
         budget: params.budget ?? null,
         status: "teklif_asamasi",
