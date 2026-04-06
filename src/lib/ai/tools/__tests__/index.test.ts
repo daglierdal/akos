@@ -3,8 +3,13 @@ import {
   defineTool,
   createProject,
   createDriveFolder,
+  generateBOQFromDocs,
   getDashboard,
+  importBOQ,
+  importPriceList,
   searchDocuments,
+  searchPrices,
+  suggestPrices,
   uploadDocument,
   getTools,
 } from "../index";
@@ -45,6 +50,33 @@ describe("tool registry exports", () => {
     expect(searchDocuments.name).toBe("searchDocuments");
   });
 
+  it("should export importBOQ", () => {
+    expect(importBOQ).toBeDefined();
+    expect(importBOQ.name).toBe("importBOQ");
+    expect(importBOQ.needsApproval).toBe(true);
+  });
+
+  it("should export generateBOQFromDocs", () => {
+    expect(generateBOQFromDocs).toBeDefined();
+    expect(generateBOQFromDocs.name).toBe("generateBOQFromDocs");
+  });
+
+  it("should export searchPrices", () => {
+    expect(searchPrices).toBeDefined();
+    expect(searchPrices.name).toBe("searchPrices");
+  });
+
+  it("should export suggestPrices", () => {
+    expect(suggestPrices).toBeDefined();
+    expect(suggestPrices.name).toBe("suggestPrices");
+  });
+
+  it("should export importPriceList", () => {
+    expect(importPriceList).toBeDefined();
+    expect(importPriceList.name).toBe("importPriceList");
+    expect(importPriceList.needsApproval).toBe(true);
+  });
+
   it("should export uploadDocument", () => {
     expect(uploadDocument).toBeDefined();
     expect(uploadDocument.name).toBe("uploadDocument");
@@ -60,7 +92,11 @@ describe("tool registry exports", () => {
     expect(tools.createProject).toBeDefined();
     expect(tools.createDriveFolder).toBeDefined();
     expect(tools.getDashboard).toBeDefined();
-    expect(tools.searchDocuments).toBeDefined();
+    expect(tools.importBOQ).toBeDefined();
+    expect(tools.generateBOQFromDocs).toBeDefined();
+    expect(tools.searchPrices).toBeDefined();
+    expect(tools.suggestPrices).toBeDefined();
+    expect(tools.importPriceList).toBeDefined();
     expect(tools.searchDocuments).toBeDefined();
     expect(tools.uploadDocument).toBeDefined();
   });

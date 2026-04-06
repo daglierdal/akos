@@ -80,21 +80,26 @@ describe("createDriveFolder", () => {
     expect(vi.mocked(createFolder)).toHaveBeenCalledTimes(25);
 
     const rows = getInsertedRows() as Array<{
-      path: string;
-      project_code: string;
-      project_name: string;
+      file_role: string | null;
+      document_type: string | null;
+      revision_label: string | null;
+      drive_file_id: string;
     }>;
 
     expect(rows).toHaveLength(25);
     expect(rows[0]).toMatchObject({
-      path: "PRJ-001_Merkez Ofis",
-      project_code: "PRJ-001",
-      project_name: "Merkez Ofis",
+      file_role: "folder",
+      document_type: "Merkez Ofis",
+      revision_label: "PRJ-001_Merkez Ofis",
     });
-    expect(rows.some((row) => row.path.endsWith("/01_Proposal/REV-00/06_Submitted"))).toBe(
+    expect(
+      rows.some((row) => row.revision_label?.endsWith("/01_Proposal/REV-00/06_Submitted"))
+    ).toBe(
       true
     );
-    expect(rows.some((row) => row.path.endsWith("/20_Models/IFC_RVT"))).toBe(true);
+    expect(rows.some((row) => row.revision_label?.endsWith("/20_Models/IFC_RVT"))).toBe(
+      true
+    );
   });
 
   it("should validate required parameters", () => {
