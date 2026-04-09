@@ -26,7 +26,15 @@ import {
 } from "./tool-definition";
 import { uploadDocument } from "./uploadDocument";
 
-export interface ToolsContext extends ToolContext {}
+/** Public context passed to getTools — tenantId is optional (phased out). */
+export interface ToolsContext {
+  supabase: ToolContext["supabase"];
+  userId: string;
+  /** @deprecated Do not use in new tools. */
+  tenantId?: string;
+  role?: string | null;
+}
+
 const registry = [
   createProposal,
   createProject,
@@ -50,6 +58,10 @@ const registry = [
 ] as const;
 
 export function getTools(context: ToolsContext): ToolSet {
+  const toolContext: ToolContext = {
+    ...context,
+    tenantId: context.tenantId ?? "",
+  };
   return Object.fromEntries(
     registry.map((toolDefinition) => [
       toolDefinition.name,
@@ -57,7 +69,7 @@ export function getTools(context: ToolsContext): ToolSet {
         description: toolDefinition.description,
         inputSchema: toolDefinition.parameters as never,
         execute: async (params: never) =>
-          toolDefinition.execute(params, context),
+          toolDefinition.execute(params, toolContext),
       }),
     ])
   ) as ToolSet;

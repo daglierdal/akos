@@ -19,25 +19,18 @@ export async function POST(
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const tenantId = session.user.app_metadata?.tenant_id;
-
-  if (typeof tenantId !== "string" || tenantId.length === 0) {
-    return Response.json({ error: "Tenant context is missing" }, { status: 403 });
-  }
-
   const { proposalId } = await context.params;
   const { data: proposal, error: proposalError } = await supabase
     .from("proposals")
     .select("id")
     .eq("id", proposalId)
-    .eq("tenant_id", tenantId)
     .single();
 
   if (proposalError || !proposal) {
     return Response.json({ error: proposalError?.message ?? "Proposal not found" }, { status: 404 });
   }
 
-  const driveClient = await getDriveClient(supabase, tenantId);
+  const driveClient = await getDriveClient();
   const pdfBuffer = await generateProposalPDF(supabase, proposalId);
   const uploaded = await uploadProposalPDF(supabase, driveClient, proposalId, pdfBuffer);
   const submittedProposal = await submitProposal(supabase, proposalId);

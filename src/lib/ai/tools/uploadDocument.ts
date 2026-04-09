@@ -40,9 +40,7 @@ export const uploadDocument: ToolDefinition<
       "Dokuman yukleme yetkiniz yok.",
     );
 
-    const driveClient = await getDriveClient(context.supabase, context.tenantId).catch(
-      () => null
-    );
+    const driveClient = await getDriveClient().catch(() => null);
     const file = new File([Buffer.from(params.contentBase64, "base64")], params.fileName, {
       type: params.mimeType,
     });

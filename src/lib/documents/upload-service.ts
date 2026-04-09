@@ -1,5 +1,5 @@
 import { Readable } from "node:stream";
-import type { drive_v3 } from "googleapis";
+import type { drive_v3 } from "@/lib/drive/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createFolder, uploadFile } from "@/lib/drive/client";
 import type { Database } from "@/lib/supabase/database.types";

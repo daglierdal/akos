@@ -22,7 +22,6 @@ describe("chat-store", () => {
 
     const result = await saveChatSession(supabase, {
       id: "session-1",
-      tenantId: "tenant-1",
       userId: "user-1",
       title: "Merhaba",
     });
@@ -30,7 +29,7 @@ describe("chat-store", () => {
     expect(upsert).toHaveBeenCalledWith(
       {
         id: "session-1",
-        tenant_id: "tenant-1",
+        tenant_id: "user-1",
         user_id: "user-1",
         title: "Merhaba",
         project_id: null,
@@ -66,14 +65,13 @@ describe("chat-store", () => {
 
     const result = await saveChatMessage(supabase, {
       sessionId: "session-1",
-      tenantId: "tenant-1",
       role: "user",
       content: "Selam",
     });
 
     expect(insert).toHaveBeenCalledWith({
       session_id: "session-1",
-      tenant_id: "tenant-1",
+      tenant_id: "session-1",
       role: "user",
       content: "Selam",
     });
@@ -83,15 +81,6 @@ describe("chat-store", () => {
   });
 
   it("returns the current user's latest sessions", async () => {
-    const maybeSingle = vi.fn().mockResolvedValue({
-      data: { id: "user-1" },
-      error: null,
-    });
-    const usersQuery = {
-      select: vi.fn(() => usersQuery),
-      eq: vi.fn(() => usersQuery),
-      maybeSingle,
-    };
     const limit = vi.fn().mockResolvedValue({
       data: [{ id: "session-1", title: "Baslik" }],
       error: null,
@@ -106,20 +95,11 @@ describe("chat-store", () => {
     const supabase = {
       auth: {
         getUser: vi.fn().mockResolvedValue({
-          data: {
-            user: {
-              email: "test@example.com",
-              app_metadata: { tenant_id: "tenant-1" },
-            },
-          },
+          data: { user: { id: "user-1" } },
           error: null,
         }),
       },
       from: vi.fn((table: string) => {
-        if (table === "users") {
-          return usersQuery;
-        }
-
         if (table === "chat_sessions") {
           return sessionsQuery;
         }
@@ -136,15 +116,6 @@ describe("chat-store", () => {
   });
 
   it("returns the current project's latest sessions", async () => {
-    const maybeSingle = vi.fn().mockResolvedValue({
-      data: { id: "user-1" },
-      error: null,
-    });
-    const usersQuery = {
-      select: vi.fn(() => usersQuery),
-      eq: vi.fn(() => usersQuery),
-      maybeSingle,
-    };
     const limit = vi.fn().mockResolvedValue({
       data: [{ id: "session-2", title: "Proje Baslik" }],
       error: null,
@@ -159,20 +130,11 @@ describe("chat-store", () => {
     const supabase = {
       auth: {
         getUser: vi.fn().mockResolvedValue({
-          data: {
-            user: {
-              email: "test@example.com",
-              app_metadata: { tenant_id: "tenant-1" },
-            },
-          },
+          data: { user: { id: "user-1" } },
           error: null,
         }),
       },
       from: vi.fn((table: string) => {
-        if (table === "users") {
-          return usersQuery;
-        }
-
         if (table === "chat_sessions") {
           return sessionsQuery;
         }

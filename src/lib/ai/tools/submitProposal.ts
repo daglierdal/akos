@@ -39,7 +39,7 @@ export const submitProposal: ToolDefinition<
       "Teklif gonderme yetkiniz yok.",
     );
 
-    const driveClient = await getDriveClient(context.supabase, context.tenantId);
+    const driveClient = await getDriveClient();
     const pdfBuffer = await generateProposalPDF(context.supabase, params.proposalId);
     const uploaded = await uploadProposalPDF(
       context.supabase,

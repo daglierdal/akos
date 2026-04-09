@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { drive_v3 } from "googleapis";
+import type { drive_v3 } from "@/lib/drive/client";
 import { createFolder, getDriveClient } from "@/lib/drive/client";
 import type { Database } from "@/lib/supabase/database.types";
 import type { ToolContext, ToolDefinition } from "./index";
@@ -136,7 +136,7 @@ export const createDriveFolder: ToolDefinition<
     const projectCode = params.projectCode.trim();
     const projectName = params.projectName.trim();
     const rootFolderName = `${projectCode}_${projectName}`;
-    const drive = await getDriveClient(context.supabase, context.tenantId);
+    const drive = await getDriveClient();
     const rootFolder = await createFolder(drive, rootFolderName);
 
     const records: DriveFileInsert[] = [

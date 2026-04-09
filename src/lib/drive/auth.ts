@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { google } from "googleapis";
+import { OAuth2Client } from "google-auth-library";
 import { createServerClient } from "@/lib/supabase/server";
 
 const GOOGLE_DRIVE_PROVIDER = "google_drive";
@@ -78,7 +78,7 @@ export function decryptSecret(value: string) {
 }
 
 export function getOAuth2Client() {
-  return new google.auth.OAuth2(
+  return new OAuth2Client(
     getRequiredEnv("GOOGLE_CLIENT_ID"),
     getRequiredEnv("GOOGLE_CLIENT_SECRET"),
     getRedirectUri()
@@ -110,11 +110,7 @@ export async function handleCallback(code: string) {
     throw new Error("Unauthorized");
   }
 
-  const tenantId = session.user.app_metadata?.tenant_id;
-  if (typeof tenantId !== "string" || tenantId.length === 0) {
-    throw new Error("Tenant context is missing from session.");
-  }
-
+  const userId = session.user.id;
   const oauth2Client = getOAuth2Client();
   const { tokens } = await oauth2Client.getToken(normalizedCode);
 
@@ -124,17 +120,15 @@ export async function handleCallback(code: string) {
 
   oauth2Client.setCredentials(tokens);
 
-  const oauth2 = google.oauth2({
-    version: "v2",
-    auth: oauth2Client,
-  });
-  const { data: profile } = await oauth2.userinfo.get();
+  const tokenInfo = await oauth2Client.getTokenInfo(tokens.access_token);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const externalConn = supabase as any;
   const { data: existingConnection, error: existingConnectionError } =
-    await supabase
+    await externalConn
       .from("external_connections")
       .select("id, refresh_token_encrypted")
-      .eq("tenant_id", tenantId)
+      .eq("user_id", userId)
       .eq("provider", GOOGLE_DRIVE_PROVIDER)
       .maybeSingle();
 
@@ -149,30 +143,27 @@ export async function handleCallback(code: string) {
     : existingConnection?.refresh_token_encrypted ?? null;
 
   const payload = {
-    tenant_id: tenantId,
-    user_id: session.user.id,
+    user_id: userId,
     provider: GOOGLE_DRIVE_PROVIDER,
-    external_user_id: profile.id ?? null,
+    external_user_id: tokenInfo.sub ?? null,
     access_token_encrypted: encryptSecret(tokens.access_token),
     refresh_token_encrypted: refreshTokenEncrypted,
     scope: tokens.scope ?? GOOGLE_DRIVE_SCOPE,
-    token_type: tokens.token_type ?? "Bearer",
+    token_type: "Bearer",
     expires_at: tokens.expiry_date
       ? new Date(tokens.expiry_date).toISOString()
       : null,
     metadata: {
-      email: profile.email ?? null,
-      name: profile.name ?? null,
-      picture: profile.picture ?? null,
+      email: tokenInfo.email ?? null,
     },
   };
 
   const query = existingConnection
-    ? supabase
+    ? externalConn
         .from("external_connections")
         .update(payload)
         .eq("id", existingConnection.id)
-    : supabase.from("external_connections").insert(payload);
+    : externalConn.from("external_connections").insert(payload);
 
   const { error: upsertError } = await query;
 
@@ -182,8 +173,7 @@ export async function handleCallback(code: string) {
 
   return {
     success: true,
-    tenantId,
-    email: profile.email ?? null,
+    email: tokenInfo.email ?? null,
   };
 }
 

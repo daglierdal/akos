@@ -4,7 +4,7 @@ import {
   stepCountIs,
   type UIMessage,
 } from "ai";
-import { openai } from "@ai-sdk/openai";
+import { anthropic } from "@ai-sdk/anthropic";
 import { getTools } from "@/lib/ai/tools";
 import {
   saveChatMessage,
@@ -25,20 +25,10 @@ Görevlerin:
 
 Mevcut yeteneklerin:
 - createProject: Yeni proje oluşturma
-- createDriveFolder: Google Drive'da proje klasor yapisi olusturma
 - getDashboard: Dashboard özet verilerini getirme
-- getProjectStatus: Tek bir proje icin durum ozeti getirme
-- searchProjects: Projeleri arama
-- listProposals: Teklifleri listeleme
-- listDocuments: Dokumanlari listeleme
-- getMorningBriefing: Sabah brifingi alma
-- searchDocuments: Belgelerde tam metin arama yapma
 
 Kullanıcı bir proje oluşturmak istediğinde createProject tool'unu kullan.
-Kullanıcı Google Drive klasoru veya proje klasor yapisi istediginde createDriveFolder tool'unu kullan.
-Kullanıcı dashboard veya genel özet istediğinde getDashboard tool'unu kullan.
-Kullanici proje durumu, proje arama, teklif listesi, dokuman listesi veya sabah ozetini istediginde ilgili tool'u kullan.
-Kullanıcı belge, şartname, keşif, sözleşme veya yüklenen dosyalarda arama istediğinde searchDocuments tool'unu kullan.`;
+Kullanıcı dashboard veya genel özet istediğinde getDashboard tool'unu kullan.`;
 
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -52,21 +42,7 @@ export async function POST(req: Request) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const tenantId = session.user.app_metadata?.tenant_id;
-  if (typeof tenantId !== "string" || tenantId.length === 0) {
-    return Response.json(
-      { error: "Tenant context is missing from session" },
-      { status: 403 }
-    );
-  }
-
   const userId = session.user.id;
-  const { data: membership } = await supabase
-    .from("tenant_memberships")
-    .select("role")
-    .eq("tenant_id", tenantId)
-    .eq("user_id", userId)
-    .maybeSingle();
 
   const {
     messages,
@@ -80,7 +56,6 @@ export async function POST(req: Request) {
     projectId?: string | null;
   } = await req.json();
 
-  // Persist incoming user message
   const latestUserMessage = [...messages]
     .reverse()
     .find((message) => message.role === "user");
@@ -89,7 +64,6 @@ export async function POST(req: Request) {
     try {
       await saveChatSession(supabase, {
         id: sessionId,
-        tenantId,
         userId,
         title: title ?? buildChatTitle(getMessageText(latestUserMessage)),
         projectId: projectId ?? null,
@@ -97,14 +71,13 @@ export async function POST(req: Request) {
 
       await saveChatMessage(supabase, {
         sessionId,
-        tenantId,
         role: "user",
         content: getMessageText(latestUserMessage),
       });
     } catch (error) {
       console.error("[CHAT_PERSIST_FAIL]", {
         sessionId,
-        tenantId,
+        userId,
         phase: "incoming-user-message",
         error: error instanceof Error ? error.message : String(error),
       });
@@ -113,16 +86,11 @@ export async function POST(req: Request) {
   }
 
   const result = streamText({
-    model: openai("gpt-4o-mini"),
+    model: anthropic("claude-haiku-4-5-20251001"),
     system: SYSTEM_PROMPT,
     messages: await convertToModelMessages(messages),
-    tools: getTools({
-      supabase,
-      tenantId,
-      userId,
-      role: membership?.role ?? null,
-    }),
-    stopWhen: stepCountIs(3),
+    tools: getTools({ supabase, userId }),
+    stopWhen: stepCountIs(2),
   });
 
   const response = result.toUIMessageStreamResponse({
@@ -139,7 +107,6 @@ export async function POST(req: Request) {
       try {
         await saveChatMessage(supabase, {
           sessionId,
-          tenantId,
           role: "assistant",
           content: getMessageText(responseMessage),
         });
@@ -150,7 +117,7 @@ export async function POST(req: Request) {
       } catch (error) {
         console.error("[CHAT_PERSIST_FAIL]", {
           sessionId,
-          tenantId,
+          userId,
           phase: "assistant-message",
           error: error instanceof Error ? error.message : String(error),
         });
@@ -163,7 +130,6 @@ export async function POST(req: Request) {
         } catch (persistError) {
           console.error("[CHAT_PERSIST_FAIL_MARK]", {
             sessionId,
-            tenantId,
             error:
               persistError instanceof Error
                 ? persistError.message

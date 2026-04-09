@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { drive_v3 } from "googleapis";
+import type { drive_v3 } from "@/lib/drive/client";
 import { createFolder, getDriveClient } from "@/lib/drive/client";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -407,7 +407,7 @@ async function ensureRevisionFolderStructure(
   proposalId: string,
   revisionCode: string
 ) {
-  const drive = await getDriveClient(supabase, context.tenantId);
+  const drive = await getDriveClient();
   const rootFolderName = `${sanitizeSegment(context.projectCode)}_${context.projectName}`;
   const rootFolder = await ensureFolder(supabase, drive, {
     name: rootFolderName,
@@ -457,7 +457,7 @@ async function ensureArchiveFolder(
   previousProposalId: string,
   previousRevisionCode: string
 ) {
-  const drive = await getDriveClient(supabase, context.tenantId);
+  const drive = await getDriveClient();
   const rootFolderName = `${sanitizeSegment(context.projectCode)}_${context.projectName}`;
   const rootFolder = await ensureFolder(supabase, drive, {
     name: rootFolderName,

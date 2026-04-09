@@ -12,14 +12,7 @@ export async function POST(req: Request) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const tenantId = session.user.app_metadata?.tenant_id;
-  if (typeof tenantId !== "string" || tenantId.length === 0) {
-    return Response.json(
-      { error: "Tenant context is missing from session" },
-      { status: 403 }
-    );
-  }
-
+  const userId = session.user.id;
   const formData = await req.formData();
   const projectId = formData.get("projectId");
 
@@ -36,14 +29,14 @@ export async function POST(req: Request) {
     return Response.json({ error: "At least one file is required" }, { status: 400 });
   }
 
-  const driveClient = await getDriveClient(supabase, tenantId).catch(() => null);
+  const driveClient = await getDriveClient().catch(() => null);
   const results = await uploadDocuments(
     supabase,
     driveClient,
     uploadableFiles,
     projectId,
-    tenantId,
-    session.user.id
+    userId,
+    userId
   );
 
   return Response.json({

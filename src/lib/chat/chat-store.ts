@@ -8,7 +8,6 @@ export type ChatMessageRow = Database["public"]["Tables"]["chat_messages"]["Row"
 
 interface SaveChatSessionInput {
   id?: string;
-  tenantId: string;
   userId: string;
   title?: string | null;
   projectId?: string | null;
@@ -16,7 +15,6 @@ interface SaveChatSessionInput {
 
 interface SaveChatMessageInput {
   sessionId: string;
-  tenantId: string;
   role: ChatMessageRow["role"];
   content: string;
 }
@@ -36,37 +34,20 @@ async function resolveCurrentUserId(supabase: DbClient) {
     throw authError;
   }
 
-  if (!user?.email) {
+  if (!user) {
     return null;
   }
 
-  const tenantId = user.app_metadata?.tenant_id;
-
-  if (typeof tenantId !== "string") {
-    return null;
-  }
-
-  const { data, error } = await supabase
-    .from("users")
-    .select("id")
-    .eq("email", user.email)
-    .eq("tenant_id", tenantId)
-    .maybeSingle();
-
-  if (error) {
-    throw error;
-  }
-
-  return data?.id ?? null;
+  return user.id;
 }
 
 export async function saveChatSession(
   supabase: DbClient,
-  { id, tenantId, userId, title, projectId }: SaveChatSessionInput,
+  { id, userId, title, projectId }: SaveChatSessionInput,
 ) {
   const payload: Database["public"]["Tables"]["chat_sessions"]["Insert"] = {
     id,
-    tenant_id: tenantId,
+    tenant_id: userId, // TODO: remove tenant_id after DB migration (using userId as placeholder)
     user_id: userId,
     title: title ?? null,
     project_id: projectId ?? null,
@@ -87,7 +68,7 @@ export async function saveChatSession(
 
 export async function saveChatMessage(
   supabase: DbClient,
-  { sessionId, tenantId, role, content }: SaveChatMessageInput,
+  { sessionId, role, content }: SaveChatMessageInput,
 ) {
   const normalizedContent = content.trim();
 
@@ -99,7 +80,7 @@ export async function saveChatMessage(
     .from("chat_messages")
     .insert({
       session_id: sessionId,
-      tenant_id: tenantId,
+      tenant_id: sessionId, // TODO: remove tenant_id after DB migration
       role,
       content: normalizedContent,
     })
