@@ -1,7 +1,6 @@
 /**
  * Document service — single source of business logic for document operations.
- * AI tools and Server Actions call these functions; they do NOT contain DB
- * queries directly.
+ * Service layer — DB queries live here, NOT in Server Actions or AI tools.
  *
  * TODO Faz 0.1 schema migration: add department/file_name columns and remove
  * tenant_id once the documents table is updated to Faz 0.1 schema.

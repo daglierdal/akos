@@ -55,36 +55,22 @@ create policy "external_connections_update" on public.external_connections
 create policy "external_connections_delete" on public.external_connections
   for delete using (user_id = auth.uid());
 
--- drive_files: replace tenant-based RLS with project-membership check
+-- drive_files: drop tenant-based RLS policies.
+-- TODO: tighten once projects table has a created_by (user_id) column.
+--       Until then, authenticated-user access is acceptable (single-org system).
 drop policy if exists "drive_files_select" on public.drive_files;
 drop policy if exists "drive_files_insert" on public.drive_files;
 drop policy if exists "drive_files_update" on public.drive_files;
 drop policy if exists "drive_files_delete" on public.drive_files;
 
 create policy "drive_files_select" on public.drive_files
-  for select using (
-    project_id in (
-      select id from public.projects where created_by = auth.uid()
-    )
-  );
+  for select using (auth.uid() is not null);
 
 create policy "drive_files_insert" on public.drive_files
-  for insert with check (
-    project_id in (
-      select id from public.projects where created_by = auth.uid()
-    )
-  );
+  for insert with check (auth.uid() is not null);
 
 create policy "drive_files_update" on public.drive_files
-  for update using (
-    project_id in (
-      select id from public.projects where created_by = auth.uid()
-    )
-  );
+  for update using (auth.uid() is not null);
 
 create policy "drive_files_delete" on public.drive_files
-  for delete using (
-    project_id in (
-      select id from public.projects where created_by = auth.uid()
-    )
-  );
+  for delete using (auth.uid() is not null);

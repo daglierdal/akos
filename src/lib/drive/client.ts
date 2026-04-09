@@ -30,7 +30,7 @@ interface ExternalConnectionRow {
 export async function getDriveClient(supabase: DbClient, userId: string) {
   // external_connections is not in generated Database types yet — cast required
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: connection, error } = await (supabase as unknown as any)
+  const { data: connection, error } = await (supabase as any)
     .from("external_connections")
     .select(
       "access_token_encrypted, refresh_token_encrypted, expires_at, scope, token_type"

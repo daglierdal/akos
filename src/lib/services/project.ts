@@ -1,7 +1,6 @@
 /**
  * Project service — single source of business logic for project operations.
- * AI tools and Server Actions call these functions; they do NOT contain DB
- * queries directly.
+ * Service layer — DB queries live here, NOT in Server Actions or AI tools.
  *
  * TODO Faz 0.1 schema migration: remove tenant_id dependency once
  * the projects table is updated to use user_id-based RLS.
