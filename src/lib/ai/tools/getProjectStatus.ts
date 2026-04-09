@@ -63,6 +63,7 @@ export const getProjectStatus = defineTool({
       throw new Error("Project not found.");
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: rootFolder, error: rootFolderError } = await (context.supabase as any)
       .from("drive_files")
       .select("discipline, revision_label")

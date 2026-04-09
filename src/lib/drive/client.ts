@@ -1,5 +1,4 @@
-import type { drive_v3 } from "googleapis";
-import { google } from "googleapis";
+import { drive as createDriveClient, type drive_v3 } from "@googleapis/drive";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { GOOGLE_DRIVE_PROVIDER, decryptSecret, getOAuth2Client } from "./auth";
@@ -20,22 +19,32 @@ export interface UploadableDriveFile {
   name: string;
 }
 
-export async function getDriveClient(supabase: DbClient, tenantId: string) {
-  const { data: connection, error } = await (supabase as any)
+interface ExternalConnectionRow {
+  access_token_encrypted: string;
+  refresh_token_encrypted: string | null;
+  expires_at: string | null;
+  scope: string | null;
+  token_type: string | null;
+}
+
+export async function getDriveClient(supabase: DbClient, userId: string) {
+  // external_connections is not in generated Database types yet — cast required
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: connection, error } = await (supabase as unknown as any)
     .from("external_connections")
     .select(
       "access_token_encrypted, refresh_token_encrypted, expires_at, scope, token_type"
     )
-    .eq("tenant_id", tenantId)
+    .eq("user_id", userId)
     .eq("provider", GOOGLE_DRIVE_PROVIDER)
-    .maybeSingle() as { data: Record<string, any> | null; error: any };
+    .maybeSingle() as { data: ExternalConnectionRow | null; error: { message: string } | null };
 
   if (error) {
     throw new Error(`Drive connection lookup failed: ${error.message}`);
   }
 
   if (!connection) {
-    throw new Error("Google Drive connection was not found for this tenant.");
+    throw new Error("Google Drive connection was not found for this user.");
   }
 
   const oauth2Client = getOAuth2Client();
@@ -51,7 +60,7 @@ export async function getDriveClient(supabase: DbClient, tenantId: string) {
     token_type: connection.token_type ?? undefined,
   });
 
-  return google.drive({
+  return createDriveClient({
     version: "v3",
     auth: oauth2Client,
   });

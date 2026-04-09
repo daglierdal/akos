@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Readable } from "node:stream";
-import type { drive_v3 } from "googleapis";
+import type { drive_v3 } from "@googleapis/drive";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createFolder, uploadFile } from "@/lib/drive/client";
 import type { Database } from "@/lib/supabase/database.types";

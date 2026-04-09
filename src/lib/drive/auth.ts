@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { google } from "googleapis";
+import { auth } from "@googleapis/drive";
 import { createServerClient } from "@/lib/supabase/server";
 
 const GOOGLE_DRIVE_PROVIDER = "google_drive";
@@ -78,7 +78,7 @@ export function decryptSecret(value: string) {
 }
 
 export function getOAuth2Client() {
-  return new google.auth.OAuth2(
+  return new auth.OAuth2(
     getRequiredEnv("GOOGLE_CLIENT_ID"),
     getRequiredEnv("GOOGLE_CLIENT_SECRET"),
     getRedirectUri()
@@ -110,10 +110,7 @@ export async function handleCallback(code: string) {
     throw new Error("Unauthorized");
   }
 
-  const tenantId = session.user.app_metadata?.tenant_id;
-  if (typeof tenantId !== "string" || tenantId.length === 0) {
-    throw new Error("Tenant context is missing from session.");
-  }
+  const userId = session.user.id;
 
   const oauth2Client = getOAuth2Client();
   const { tokens } = await oauth2Client.getToken(normalizedCode);
@@ -122,19 +119,19 @@ export async function handleCallback(code: string) {
     throw new Error("Google OAuth token exchange did not return an access token.");
   }
 
-  oauth2Client.setCredentials(tokens);
-
-  const oauth2 = google.oauth2({
-    version: "v2",
-    auth: oauth2Client,
+  // Fetch user profile from Google userinfo endpoint
+  const userinfoRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+    headers: { Authorization: `Bearer ${tokens.access_token}` },
   });
-  const { data: profile } = await oauth2.userinfo.get();
+  const profile = userinfoRes.ok
+    ? (await userinfoRes.json() as { id?: string; email?: string; name?: string; picture?: string })
+    : {};
 
   const { data: existingConnection, error: existingConnectionError } =
     await supabase
       .from("external_connections")
       .select("id, refresh_token_encrypted")
-      .eq("tenant_id", tenantId)
+      .eq("user_id", userId)
       .eq("provider", GOOGLE_DRIVE_PROVIDER)
       .maybeSingle();
 
@@ -149,8 +146,7 @@ export async function handleCallback(code: string) {
     : existingConnection?.refresh_token_encrypted ?? null;
 
   const payload = {
-    tenant_id: tenantId,
-    user_id: session.user.id,
+    user_id: userId,
     provider: GOOGLE_DRIVE_PROVIDER,
     external_user_id: profile.id ?? null,
     access_token_encrypted: encryptSecret(tokens.access_token),
@@ -182,7 +178,7 @@ export async function handleCallback(code: string) {
 
   return {
     success: true,
-    tenantId,
+    userId,
     email: profile.email ?? null,
   };
 }

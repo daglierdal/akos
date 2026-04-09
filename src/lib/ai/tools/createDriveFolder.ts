@@ -166,6 +166,7 @@ export const createDriveFolder: ToolDefinition<
       records
     );
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (context.supabase as any).from("drive_files").insert(records);
 
     if (error) {

@@ -150,6 +150,7 @@ export function ProjectPanel({ projectId }: ProjectPanelProps) {
           throw new Error("Project not found.");
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: rootFolder, error: rootError } = await (supabase as any)
           .from("drive_files")
           .select("discipline, revision_label")

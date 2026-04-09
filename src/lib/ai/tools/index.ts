@@ -26,7 +26,7 @@ import {
 } from "./tool-definition";
 import { uploadDocument } from "./uploadDocument";
 
-export interface ToolsContext extends ToolContext {}
+export type ToolsContext = ToolContext;
 const registry = [
   createProposal,
   createProject,

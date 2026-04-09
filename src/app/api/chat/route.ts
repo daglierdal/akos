@@ -4,7 +4,7 @@ import {
   stepCountIs,
   type UIMessage,
 } from "ai";
-import { openai } from "@ai-sdk/openai";
+import { anthropic } from "@ai-sdk/anthropic";
 import { getTools } from "@/lib/ai/tools";
 import {
   saveChatMessage,
@@ -113,7 +113,7 @@ export async function POST(req: Request) {
   }
 
   const result = streamText({
-    model: openai("gpt-4o-mini"),
+    model: anthropic("claude-haiku-4-5-20251001"),
     system: SYSTEM_PROMPT,
     messages: await convertToModelMessages(messages),
     tools: getTools({

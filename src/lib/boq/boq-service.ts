@@ -15,7 +15,7 @@ type ItemRow = Database["public"]["Tables"]["boq_items"]["Row"];
 type ItemInsert = Database["public"]["Tables"]["boq_items"]["Insert"];
 type ItemUpdate = Database["public"]["Tables"]["boq_items"]["Update"];
 
-export interface BOQTreeItem extends ItemRow {}
+export type BOQTreeItem = ItemRow;
 
 export interface BOQTreeSubcategory extends SubcategoryRow {
   items: BOQTreeItem[];

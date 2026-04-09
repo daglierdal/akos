@@ -48,6 +48,7 @@ export const searchProjects = defineTool({
     const [{ data: projects, error: projectError }, { data: driveRoots, error: driveError }] =
       await Promise.all([
         query,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (context.supabase as any)
           .from("drive_files")
           .select("project_id, discipline")
