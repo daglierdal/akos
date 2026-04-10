@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { drive_v3 } from "googleapis";
+import type { drive_v3 } from "@googleapis/drive";
 import { createFolder, getDriveClient } from "@/lib/drive/client";
 import type { Database } from "@/lib/supabase/database.types";
 
