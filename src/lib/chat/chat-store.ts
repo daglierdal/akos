@@ -8,7 +8,7 @@ export type ChatMessageRow = Database["public"]["Tables"]["chat_messages"]["Row"
 
 interface SaveChatSessionInput {
   id?: string;
-  tenantId: string;
+  tenantId: string | null;
   userId: string;
   title?: string | null;
   projectId?: string | null;
@@ -16,7 +16,7 @@ interface SaveChatSessionInput {
 
 interface SaveChatMessageInput {
   sessionId: string;
-  tenantId: string;
+  tenantId: string | null;
   role: ChatMessageRow["role"];
   content: string;
 }
@@ -40,17 +40,11 @@ async function resolveCurrentUserId(supabase: DbClient) {
     return null;
   }
 
-  const tenantId = user.app_metadata?.tenant_id;
-
-  if (typeof tenantId !== "string") {
-    return null;
-  }
-
+  // Faz 0.1: Look up by email without tenant_id filter (single tenant)
   const { data, error } = await supabase
     .from("users")
     .select("id")
     .eq("email", user.email)
-    .eq("tenant_id", tenantId)
     .maybeSingle();
 
   if (error) {
@@ -64,6 +58,11 @@ export async function saveChatSession(
   supabase: DbClient,
   { id, tenantId, userId, title, projectId }: SaveChatSessionInput,
 ) {
+  if (!tenantId) {
+    // Faz 0.1: Skip persistence if no tenant context (DB requires NOT NULL)
+    return null;
+  }
+
   const payload: Database["public"]["Tables"]["chat_sessions"]["Insert"] = {
     id,
     tenant_id: tenantId,
@@ -92,6 +91,10 @@ export async function saveChatMessage(
   const normalizedContent = content.trim();
 
   if (!normalizedContent) {
+    return null;
+  }
+
+  if (!tenantId) {
     return null;
   }
 

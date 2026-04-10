@@ -52,20 +52,17 @@ export async function POST(req: Request) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const tenantId = session.user.app_metadata?.tenant_id;
-  if (typeof tenantId !== "string" || tenantId.length === 0) {
-    return Response.json(
-      { error: "Tenant context is missing from session" },
-      { status: 403 }
-    );
-  }
+  const tenantId = typeof session.user.app_metadata?.tenant_id === "string"
+    ? session.user.app_metadata.tenant_id
+    : null;
 
   const userId = session.user.id;
-  const { data: membership } = await supabase
-    .from("tenant_memberships")
+
+  // Faz 0.1: Get role from users table, not tenant_memberships
+  const { data: userRow } = await supabase
+    .from("users")
     .select("role")
-    .eq("tenant_id", tenantId)
-    .eq("user_id", userId)
+    .eq("id", userId)
     .maybeSingle();
 
   const {
@@ -118,9 +115,9 @@ export async function POST(req: Request) {
     messages: await convertToModelMessages(messages),
     tools: getTools({
       supabase,
-      tenantId,
+      tenantId: tenantId ?? "",
       userId,
-      role: membership?.role ?? null,
+      role: userRow?.role ?? null,
     }),
     stopWhen: stepCountIs(3),
   });

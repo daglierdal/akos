@@ -56,32 +56,40 @@ export function assertPermission(
   }
 }
 
-export async function getTenantMembershipRole(
+// Faz 0.1: Get role from users table, not tenant_memberships (single tenant)
+export async function getUserRole(
   supabase: SupabaseClient<Database>,
-  tenantId: string,
   userId: string,
 ): Promise<MembershipRole> {
-  const { data: membership, error } = await supabase
-    .from("tenant_memberships")
+  const { data: userRow, error } = await supabase
+    .from("users")
     .select("role")
-    .eq("tenant_id", tenantId)
-    .eq("user_id", userId)
+    .eq("id", userId)
     .maybeSingle();
 
   if (error) {
-    throw new Error(`Uyelik rolu alinmadi: ${error.message}`);
+    throw new Error(`Kullanici rolu alinmadi: ${error.message}`);
   }
 
-  return membership?.role;
+  return userRow?.role;
+}
+
+// Keep old signature for compatibility — ignores tenantId, queries users table
+export async function getTenantMembershipRole(
+  supabase: SupabaseClient<Database>,
+  _tenantId: string,
+  userId: string,
+): Promise<MembershipRole> {
+  return getUserRole(supabase, userId);
 }
 
 export async function assertTenantPermission(
   supabase: SupabaseClient<Database>,
-  tenantId: string,
+  _tenantId: string,
   userId: string,
   check: (role: MembershipRole) => boolean,
   message = "Bu islem icin yetkiniz yok.",
 ) {
-  const role = await getTenantMembershipRole(supabase, tenantId, userId);
+  const role = await getUserRole(supabase, userId);
   assertPermission(check(role), message);
 }

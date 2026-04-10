@@ -36,22 +36,16 @@ export async function getSession(): Promise<SessionContext> {
   const tenantId =
     typeof user.app_metadata?.tenant_id === "string" ? user.app_metadata.tenant_id : null;
 
+  // Faz 0.1: Get role from users table directly, not tenant_memberships
   let role: string | null = null;
 
-  if (tenantId) {
-    const { data: membership, error: membershipError } = await supabase
-      .from("tenant_memberships")
-      .select("role")
-      .eq("tenant_id", tenantId)
-      .eq("user_id", user.id)
-      .maybeSingle();
+  const { data: userRow } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
 
-    if (membershipError) {
-      throw membershipError;
-    }
-
-    role = membership?.role ?? null;
-  }
+  role = userRow?.role ?? null;
 
   return {
     session,
